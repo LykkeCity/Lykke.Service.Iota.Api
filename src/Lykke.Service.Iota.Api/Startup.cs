@@ -35,8 +35,8 @@ namespace Lykke.Service.Iota.Api
             var builder = new ConfigurationBuilder()
                 .SetBasePath(env.ContentRootPath)
                 .AddEnvironmentVariables();
-            Configuration = builder.Build();
 
+            Configuration = builder.Build();
             Environment = env;
         }
 
@@ -61,6 +61,7 @@ namespace Lykke.Service.Iota.Api
 
                 var builder = new ContainerBuilder();
                 var appSettings = Configuration.LoadSettings<AppSettings>();
+
                 Log = CreateLogWithSlack(services, appSettings);
 
                 builder.RegisterModule(new ServiceModule(appSettings.Nested(x => x.IotaApi), Log));
