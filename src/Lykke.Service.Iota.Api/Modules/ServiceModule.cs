@@ -81,7 +81,6 @@ namespace Lykke.Service.Iota.Api.Modules
 
             builder.RegisterType<IotaService>()
                 .As<IIotaService>()
-                .WithParameter("network", _settings.CurrentValue.Network)
                 .WithParameter("minConfirmations", _settings.CurrentValue.MinConfirmations)
                 .SingleInstance();
         }

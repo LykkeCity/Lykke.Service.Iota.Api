@@ -1,12 +1,8 @@
 ﻿using Common.Log;
-using Lykke.Service.Iota.Api.Core.Domain;
 using Lykke.Service.Iota.Api.Core.Domain.Broadcast;
-using Lykke.Service.Iota.Api.Core.Services;
 using Lykke.Service.Iota.Api.Core.Repositories;
 using System;
 using System.Threading.Tasks;
-using System.Linq;
-using System.Collections.Generic;
 
 namespace Lykke.Service.Iota.Api.Services
 {
@@ -22,7 +18,6 @@ namespace Lykke.Service.Iota.Api.Services
             IBroadcastInProgressRepository broadcastInProgressRepository,
             IBalanceRepository balanceRepository,
             IBalancePositiveRepository balancePositiveRepository,
-            string network,
             decimal fee,
             int minConfirmations)
         {
