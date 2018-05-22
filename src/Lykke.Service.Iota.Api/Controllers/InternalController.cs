@@ -36,15 +36,11 @@ namespace Lykke.Service.Iota.Api.Controllers
         /// Returns latest used index for the provided virtual Iota address
         /// </summary>
         [HttpGet("virtual-address/{address}/index")]
-        public async Task<long> GetVirtualAddressIndex([Required] string address)
+        public async Task<long?> GetVirtualAddressIndex([Required] string address)
         {
             var addressVirtual = await _addressVirtualRepository.GetAsync(address);
-            if (addressVirtual == null)
-            {
-                return 0;
-            }
 
-            return addressVirtual.LatestAddressIndex;
+            return addressVirtual?.LatestAddressIndex;
         }
     }
 }
