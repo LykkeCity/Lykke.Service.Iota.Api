@@ -13,6 +13,8 @@ namespace Lykke.Service.Iota.Api.AzureRepositories.AddressVirtual
             get => RowKey;
         }
 
+        public string LatestAddress { get; set; }
+
         public long LatestAddressIndex { get; set; }
     }
 }

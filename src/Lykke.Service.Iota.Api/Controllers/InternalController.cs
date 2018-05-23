@@ -27,7 +27,7 @@ namespace Lykke.Service.Iota.Api.Controllers
             [FromBody] VirtualAddressRequest virtualAddressRequest)
         {
             await _addressRepository.SaveAsync(address, virtualAddressRequest.RealAddress, virtualAddressRequest.Index);
-            await _addressVirtualRepository.SaveAsync(address, virtualAddressRequest.Index);
+            await _addressVirtualRepository.SaveAsync(address, virtualAddressRequest.RealAddress, virtualAddressRequest.Index);
 
             return Ok();
         }
