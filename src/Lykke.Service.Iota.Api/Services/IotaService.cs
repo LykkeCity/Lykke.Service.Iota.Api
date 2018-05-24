@@ -1,8 +1,10 @@
 ﻿using Common.Log;
+using Lykke.Service.Iota.Api.Core.Domain;
 using Lykke.Service.Iota.Api.Core.Domain.Broadcast;
 using Lykke.Service.Iota.Api.Core.Repositories;
 using System;
 using System.Threading.Tasks;
+using Tangle.Net.Entity;
 
 namespace Lykke.Service.Iota.Api.Services
 {
@@ -18,7 +20,6 @@ namespace Lykke.Service.Iota.Api.Services
             IBroadcastInProgressRepository broadcastInProgressRepository,
             IBalanceRepository balanceRepository,
             IBalancePositiveRepository balancePositiveRepository,
-            decimal fee,
             int minConfirmations)
         {
             _log = log;
@@ -27,22 +28,27 @@ namespace Lykke.Service.Iota.Api.Services
             _minConfirmations = minConfirmations;
         }
 
-        public object GetAddress(string address)
+        public bool ValidateAddress(string address)
         {
-            return null;
+            if (address.StartsWith(Consts.VirtualAddressPrefix))
+            {
+                return true;
+            }
+
+            try
+            {
+                var iotaAddress = new Address(address);
+
+                return true;
+            }
+            catch { }
+
+            return false;
         }
 
         public object GetTransaction(string transactionHex)
         {
             return null;
-        }
-
-        public async Task<string> BuildTransactionAsync(Guid operationId, object fromAddress,
-            object toAddress, decimal amount, bool includeFee)
-        {
-            await Task.Yield();
-
-            return "";
         }
 
         public async Task BroadcastAsync(object transaction, Guid operationId)
@@ -67,10 +73,5 @@ namespace Lykke.Service.Iota.Api.Services
 
             return 0;
         }
-
-        public decimal GetFee()
-        {
-            return 0;
-        }        
     }
 }

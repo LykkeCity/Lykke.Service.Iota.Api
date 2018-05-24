@@ -22,7 +22,7 @@ namespace Lykke.Service.Iota.Api.Controllers
         {
             return Ok(new AddressValidationResponse()
             {
-                IsValid = _iotaService.GetAddress(address) != null
+                IsValid = _iotaService.ValidateAddress(address)
             });
         }
     }

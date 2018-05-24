@@ -53,9 +53,7 @@ namespace Lykke.Service.Iota.Api.Controllers
             {
                 return BadRequest(ErrorResponse.Create($"{nameof(address)} is null or empty"));
             }
-
-            var validAddress = _iotaService.GetAddress(address) != null;
-            if (!validAddress)
+            if (!_iotaService.ValidateAddress(address))
             {
                 return BadRequest(ErrorResponse.Create($"{nameof(address)} is not valid"));
             }

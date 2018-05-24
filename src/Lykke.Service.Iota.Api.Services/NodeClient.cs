@@ -1,35 +1,33 @@
 ﻿using Common.Log;
-using Flurl.Http;
-using Lykke.Service.Iota.Api.Services.Helpers;
-using System;
+using Lykke.Service.Iota.Api.Core.Services;
+using RestSharp;
+using System.Collections.Generic;
 using System.Threading.Tasks;
+using Tangle.Net.Entity;
+using Tangle.Net.Repository;
 
 namespace Lykke.Service.Iota.Api.Services
 {
-    public class NodeClient
+    public class NodeClient : INodeClient
     {
         private readonly ILog _log;
-        private readonly string _url;
+        private readonly RestIotaRepository _repository;
 
-        public NodeClient(ILog log, string url)
+        public NodeClient(ILog log, string nodeUrl)
         {
             _log = log;
-            _url = url;
+
+            _repository = new RestIotaRepository(new RestClient(nodeUrl));
         }
 
-        private async Task<T> GetJson<T>(string url, int tryCount = 3)
+        public async Task<long> GetAddressBalance(string address)
         {
-            bool NeedToRetryException(Exception ex)
+            var response = await _repository.GetBalancesAsync(new List<Address>
             {
-                if (ex is FlurlHttpException flurlException)
-                {
-                    return true;
-                }
+                new Address(address)
+            });
 
-                return false;
-            }
-
-            return await Retry.Try(() => url.GetJsonAsync<T>(), NeedToRetryException, tryCount, _log, 100);
+            return response.Addresses[0].Balance;
         }
     }
 }

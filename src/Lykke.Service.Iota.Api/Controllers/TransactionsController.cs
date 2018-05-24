@@ -22,14 +22,17 @@ namespace Lykke.Service.Iota.Api.Controllers
         private readonly ILog _log;
         private readonly IIotaService _iotaService;
         private readonly IBuildRepository _buildRepository;
+        private readonly IAddressVirtualRepository _addressVirtualRepository;
 
         public TransactionsController(ILog log, 
             IIotaService iotaService,
-            IBuildRepository buildRepository)
+            IBuildRepository buildRepository,
+            IAddressVirtualRepository addressVirtualRepository)
         {
             _log = log;
             _iotaService = iotaService;
             _buildRepository = buildRepository;
+            _addressVirtualRepository = addressVirtualRepository;
         }
 
         [HttpPost("single")]
@@ -40,22 +43,38 @@ namespace Lykke.Service.Iota.Api.Controllers
             {
                 return BadRequest(ModelState.ToErrorResponse());
             }
-
-            var fromAddress = _iotaService.GetAddress(request.FromAddress);
-            if (fromAddress == null)
+            if (!request.FromAddress.StartsWith(Consts.VirtualAddressPrefix))
             {
-                return BadRequest(ErrorResponse.Create($"{nameof(request.FromAddress)} is not a valid"));
+                return BadRequest(ErrorResponse.Create($"{nameof(request.FromAddress)} must start " +
+                    $"from {Consts.VirtualAddressPrefix}"));
             }
-
-            var toAddress = _iotaService.GetAddress(request.ToAddress);
-            if (toAddress == null)
+            if (!_iotaService.ValidateAddress(request.ToAddress))
             {
                 return BadRequest(ErrorResponse.Create($"{nameof(request.ToAddress)} is not a valid"));
             }
-
             if (request.AssetId != Asset.Miota.Id)
             {
                 return BadRequest(ErrorResponse.Create($"{nameof(request.AssetId)} was not found"));
+            }
+
+            var addressVirtual = await _addressVirtualRepository.GetAsync(request.FromAddress);
+            if (addressVirtual == null)
+            {
+                return BadRequest(ErrorResponse.Create($"{nameof(request.FromAddress)} was not found"));
+            }
+
+            var amount = Conversions.CoinsFromContract(request.Amount, Asset.Miota.Accuracy);
+            var fromAddressBalance = await _iotaService.GetAddressBalance(addressVirtual.LatestAddress);
+            if (amount > fromAddressBalance)
+            {
+                return BadRequest(BlockchainErrorResponse.FromKnownError(BlockchainErrorCode.NotEnoughtBalance));
+            }
+
+            var txType = request.ToAddress.StartsWith(Consts.VirtualAddressPrefix) ? Consts.TxCashin : Consts.TxCashout;
+            if (txType == Consts.TxCashin && amount != fromAddressBalance)
+            {
+                return BadRequest(ErrorResponse.Create($"{nameof(amount)} ({amount}) must equal " +
+                    $"{nameof(fromAddressBalance)} ({fromAddressBalance}) for the {txType} operation"));
             }
 
             var build = await _buildRepository.GetAsync(request.OperationId);
@@ -67,25 +86,10 @@ namespace Lykke.Service.Iota.Api.Controllers
                 });
             }
 
-            var amount = Conversions.CoinsFromContract(request.Amount, Asset.Miota.Accuracy);
-            var fromAddressBalance = await _iotaService.GetAddressBalance(request.FromAddress);
-            var fee = _iotaService.GetFee();
-            var requiredBalance = request.IncludeFee ? amount : amount + fee;
-
-            if (amount < fee)
-            {
-                return BadRequest(BlockchainErrorResponse.FromKnownError(BlockchainErrorCode.AmountIsTooSmall));
-            }
-            if (requiredBalance > fromAddressBalance)
-            {
-                return BadRequest(BlockchainErrorResponse.FromKnownError(BlockchainErrorCode.NotEnoughtBalance));
-            }
-
             await _log.WriteInfoAsync(nameof(TransactionsController), nameof(Build),
                 request.ToJson(), "Build transaction");
 
-            var transactionContext = await _iotaService.BuildTransactionAsync(request.OperationId, fromAddress, 
-                toAddress, amount, request.IncludeFee);
+            var transactionContext = GetTxContext(request, amount, txType);
 
             await _buildRepository.AddAsync(request.OperationId, transactionContext);
 
@@ -93,6 +97,29 @@ namespace Lykke.Service.Iota.Api.Controllers
             {
                 TransactionContext = transactionContext
             });
+        }
+
+        private static string GetTxContext(BuildSingleTransactionRequest request, decimal amount, string txType)
+        {
+            return new
+            {
+                Type = txType,
+                Inputs = new object[]
+                {
+                    new
+                    {
+                        VirtualAddress = request.FromAddress
+                    }
+                },
+                Outputs = new object[]
+                {
+                    new
+                    {
+                        Address = request.ToAddress,
+                        Value = amount
+                    }
+                },
+            }.ToJson();
         }
 
         [HttpPut]
@@ -179,32 +206,6 @@ namespace Lykke.Service.Iota.Api.Controllers
             return Ok();
         }
 
-        [HttpPost("history/from/{address}/observation")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        public IActionResult AddObservationFromAddress([Required] string address)
-        {
-            var iotaAddress = _iotaService.GetAddress(address);
-            if (iotaAddress == null)
-            {
-                return BadRequest(ErrorResponse.Create($"{nameof(address)} is not a valid"));
-            }
-
-            return Ok();
-        }
-
-        [HttpPost("history/to/{address}/observation")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        public IActionResult AddObservationToAddress([Required] string address)
-        {
-            var iotaAddress = _iotaService.GetAddress(address);
-            if (iotaAddress == null)
-            {
-                return BadRequest(ErrorResponse.Create($"{nameof(address)} is not a valid"));
-            }
-
-            return Ok();
-        }
-
         [HttpGet("history/from/{address}")]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(HistoricalTransactionContract[]))]
         public async Task<IActionResult> GetHistoryFromAddress([Required] string address,
@@ -212,32 +213,6 @@ namespace Lykke.Service.Iota.Api.Controllers
             [FromQuery] string afterHash)
         {
             await Task.Yield();
-
-            return Ok();
-        }
-
-        [HttpDelete("history/from/{address}/observation")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        public IActionResult DeleteObservationFromAddress([Required] string address)
-        {
-            var iotaAddress = _iotaService.GetAddress(address);
-            if (iotaAddress == null)
-            {
-                return BadRequest(ErrorResponse.Create($"{nameof(address)} is not a valid"));
-            }
-
-            return Ok();
-        }
-
-        [HttpDelete("history/to/{address}/observation")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        public IActionResult DeleteObservationToAddress([Required] string address)
-        {
-            var iotaAddress = _iotaService.GetAddress(address);
-            if (iotaAddress == null)
-            {
-                return BadRequest(ErrorResponse.Create($"{nameof(address)} is not a valid"));
-            }
 
             return Ok();
         }

@@ -3,6 +3,7 @@
     public interface IAddressVirtual
     {
         string AddressVirtual { get; }
+        string LatestAddress { get; set; }
         long LatestAddressIndex { get; }
     }
 }

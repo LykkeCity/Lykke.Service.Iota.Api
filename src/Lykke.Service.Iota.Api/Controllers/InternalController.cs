@@ -1,5 +1,7 @@
 ﻿using Lykke.Service.Iota.Api.Core.Repositories;
+using Lykke.Service.Iota.Api.Core.Services;
 using Lykke.Service.Iota.Api.Models;
+using Lykke.Service.Iota.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
 using System.Threading.Tasks;
@@ -9,12 +11,15 @@ namespace Lykke.Service.Iota.Api.Controllers
     [Route("api/internal")]
     public class InternalController : Controller
     {
+        private readonly INodeClient _nodeClient;
         private readonly IAddressRepository _addressRepository;
         private readonly IAddressVirtualRepository _addressVirtualRepository;
 
-        public InternalController(IAddressRepository addressRepository, 
+        public InternalController(INodeClient nodeClient,
+            IAddressRepository addressRepository, 
             IAddressVirtualRepository addressVirtualRepository)
         {
+            _nodeClient = nodeClient;
             _addressRepository = addressRepository;
             _addressVirtualRepository = addressVirtualRepository;
         }
@@ -45,6 +50,23 @@ namespace Lykke.Service.Iota.Api.Controllers
             }
 
             return Ok(addressVirtual.LatestAddressIndex);
+        }
+
+        /// <summary>
+        /// Returns virtual Iota address balance
+        /// </summary>
+        [HttpGet("virtual-address/{address}/balance")]
+        public async Task<IActionResult> GetVirtualAddressBalance([Required] string address)
+        {
+            var addressVirtual = await _addressVirtualRepository.GetAsync(address);
+            if (addressVirtual == null)
+            {
+                return NotFound();
+            }
+
+            var fromAddressBalance = await _nodeClient.GetAddressBalance(addressVirtual.LatestAddress);
+
+            return Ok(fromAddressBalance);
         }
     }
 }

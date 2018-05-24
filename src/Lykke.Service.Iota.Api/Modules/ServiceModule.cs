@@ -77,6 +77,11 @@ namespace Lykke.Service.Iota.Api.Modules
             builder.RegisterType<AddressVirtualRepository>()
                 .As<IAddressVirtualRepository>()
                 .WithParameter(TypedParameter.From(connectionStringManager))
+                .SingleInstance();
+
+            builder.RegisterType<NodeClient>()
+                .As<INodeClient>()
+                .WithParameter("nodeUrl", _settings.CurrentValue.NodeUrl)
                 .SingleInstance();            
 
             builder.RegisterType<IotaService>()
