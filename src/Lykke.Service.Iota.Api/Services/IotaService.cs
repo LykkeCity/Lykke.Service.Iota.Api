@@ -67,11 +67,11 @@ namespace Lykke.Service.Iota.Api.Services
             await _broadcastRepository.DeleteAsync(broadcast.OperationId);
         }
 
-        public async Task<decimal> GetAddressBalance(string address)
+        public async Task<long> GetAddressBalance(string address)
         {
             await Task.Yield();
 
-            return 0;
+            return 1000;
         }
     }
 }

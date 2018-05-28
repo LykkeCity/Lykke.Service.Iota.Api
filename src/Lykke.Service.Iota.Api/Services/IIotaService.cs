@@ -17,6 +17,6 @@ namespace Lykke.Service.Iota.Api.Services
 
         Task DeleteBroadcastAsync(IBroadcast broadcast);
 
-        Task<decimal> GetAddressBalance(string address);
+        Task<long> GetAddressBalance(string address);
     }
 }

@@ -56,6 +56,10 @@ namespace Lykke.Service.Iota.Api.Controllers
             {
                 return BadRequest(ErrorResponse.Create($"{nameof(request.AssetId)} was not found"));
             }
+            if (!long.TryParse(request.Amount, out var amount))
+            {
+                return BadRequest(ErrorResponse.Create($"{nameof(request.Amount)} can not be converted to long"));
+            }
 
             var addressVirtual = await _addressVirtualRepository.GetAsync(request.FromAddress);
             if (addressVirtual == null)
@@ -63,7 +67,6 @@ namespace Lykke.Service.Iota.Api.Controllers
                 return BadRequest(ErrorResponse.Create($"{nameof(request.FromAddress)} was not found"));
             }
 
-            var amount = Conversions.CoinsFromContract(request.Amount, Asset.Miota.Accuracy);
             var fromAddressBalance = await _iotaService.GetAddressBalance(addressVirtual.LatestAddress);
             if (amount > fromAddressBalance)
             {
@@ -99,7 +102,7 @@ namespace Lykke.Service.Iota.Api.Controllers
             });
         }
 
-        private static string GetTxContext(BuildSingleTransactionRequest request, decimal amount, string txType)
+        private static string GetTxContext(BuildSingleTransactionRequest request, long amount, string txType)
         {
             return new
             {
