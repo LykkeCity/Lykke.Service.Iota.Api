@@ -66,7 +66,9 @@ namespace Lykke.Service.Iota.Api.Controllers
 
             var fromAddressBalance = await _nodeClient.GetAddressBalance(addressVirtual.LatestAddress);
 
-            return Ok(fromAddressBalance);
+            //return Ok(fromAddressBalance);
+
+            return Ok(1000);
         }
     }
 }
