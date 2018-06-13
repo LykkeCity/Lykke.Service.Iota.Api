@@ -8,16 +8,18 @@ namespace Lykke.Service.Iota.Api.AzureRepositories.Address
     [ValueTypeMergingStrategy(ValueTypeMergingStrategy.UpdateAlways)]
     internal class AddressEntity : AzureTableEntity, IAddress
     {
-        public string Address
-        {
-            get => RowKey;
-        }
-
         public string AddressVirtual
         {
             get => PartitionKey;
         }
 
+        public string Address
+        {
+            get => RowKey;
+        }
+
         public long Index { get; set; }
+
+        public bool HasCashOut { get; set; }
     }
 }

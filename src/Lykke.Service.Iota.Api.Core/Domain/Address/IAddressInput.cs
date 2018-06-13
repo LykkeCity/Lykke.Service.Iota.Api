@@ -1,10 +1,9 @@
 ﻿namespace Lykke.Service.Iota.Api.Core.Domain.Address
 {
-    public interface IAddress
+    public interface IAddressInput
     {
         string AddressVirtual { get; }
         string Address { get; }
         long Index { get; }
-        bool HasCashOut { get; }
     }
 }

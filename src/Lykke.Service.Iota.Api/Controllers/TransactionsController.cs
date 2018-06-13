@@ -22,12 +22,12 @@ namespace Lykke.Service.Iota.Api.Controllers
         private readonly ILog _log;
         private readonly IIotaService _iotaService;
         private readonly IBuildRepository _buildRepository;
-        private readonly IAddressVirtualRepository _addressVirtualRepository;
+        private readonly IAddressInputRepository _addressVirtualRepository;
 
         public TransactionsController(ILog log, 
             IIotaService iotaService,
             IBuildRepository buildRepository,
-            IAddressVirtualRepository addressVirtualRepository)
+            IAddressInputRepository addressVirtualRepository)
         {
             _log = log;
             _iotaService = iotaService;
@@ -67,7 +67,7 @@ namespace Lykke.Service.Iota.Api.Controllers
                 return BadRequest(ErrorResponse.Create($"{nameof(request.FromAddress)} was not found"));
             }
 
-            var fromAddressBalance = await _iotaService.GetAddressBalance(addressVirtual.LatestAddress);
+            var fromAddressBalance = await _iotaService.GetVirtualAddressBalance(request.FromAddress);
             if (amount > fromAddressBalance)
             {
                 return BadRequest(BlockchainErrorResponse.FromKnownError(BlockchainErrorCode.NotEnoughtBalance));
@@ -147,8 +147,7 @@ namespace Lykke.Service.Iota.Api.Controllers
                 return new StatusCodeResult(StatusCodes.Status409Conflict);
             }
 
-            var transaction = _iotaService.GetTransaction(request.SignedTransaction);
-            if (transaction == null)
+            if (!_iotaService.ValidateSignedTransaction(request.SignedTransaction))
             {
                 return BadRequest(ErrorResponse.Create($"{nameof(request.SignedTransaction)} is not a valid"));
             }
@@ -156,7 +155,7 @@ namespace Lykke.Service.Iota.Api.Controllers
             await _log.WriteInfoAsync(nameof(TransactionsController), nameof(Broadcast),
                 request.ToJson(), "Broadcast transaction");
 
-            await _iotaService.BroadcastAsync(transaction, request.OperationId);
+            await _iotaService.BroadcastAsync(request.SignedTransaction, request.OperationId);
 
             return Ok();
         }

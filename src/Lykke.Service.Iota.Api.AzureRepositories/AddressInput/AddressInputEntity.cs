@@ -6,15 +6,18 @@ using Lykke.Service.Iota.Api.Core.Domain.Address;
 namespace Lykke.Service.Iota.Api.AzureRepositories.AddressVirtual
 {
     [ValueTypeMergingStrategy(ValueTypeMergingStrategy.UpdateAlways)]
-    internal class AddressVirtualEntity : AzureTableEntity, IAddressVirtual
+    internal class AddressInputEntity : AzureTableEntity, IAddressInput
     {
         public string AddressVirtual
+        {
+            get => PartitionKey;
+        }
+
+        public string Address
         {
             get => RowKey;
         }
 
-        public string LatestAddress { get; set; }
-
-        public long LatestAddressIndex { get; set; }
+        public long Index { get; set; }
     }
 }

@@ -1,5 +1,5 @@
-﻿using Lykke.Service.Iota.Api.Core.Domain.Address;
-using Lykke.Service.Iota.Api.Core.Domain.Broadcast;
+﻿using Lykke.Service.Iota.Api.Core.Domain.Broadcast;
+using Lykke.Service.Iota.Api.Models;
 using System;
 using System.Threading.Tasks;
 
@@ -9,14 +9,16 @@ namespace Lykke.Service.Iota.Api.Services
     {
         bool ValidateAddress(string address);
 
-        object GetTransaction(string transactionHex);
+        bool ValidateSignedTransaction(string transactionHex);
 
-        Task BroadcastAsync(object transaction, Guid operationId);
+        Task BroadcastAsync(string signedTransaction, Guid operationId);
 
         Task<IBroadcast> GetBroadcastAsync(Guid operationId);
 
         Task DeleteBroadcastAsync(IBroadcast broadcast);
 
-        Task<long> GetAddressBalance(string address);
+        Task<long> GetVirtualAddressBalance(string address);
+
+        Task<AddressInput[]> GetVirtualAddressInputs(string virtualAddress);
     }
 }

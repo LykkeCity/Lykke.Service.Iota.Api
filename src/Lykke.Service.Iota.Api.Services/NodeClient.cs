@@ -1,10 +1,12 @@
 ﻿using Common.Log;
 using Lykke.Service.Iota.Api.Core.Services;
 using RestSharp;
+using System.Linq;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Tangle.Net.Entity;
 using Tangle.Net.Repository;
+using System;
 
 namespace Lykke.Service.Iota.Api.Services
 {
@@ -28,6 +30,26 @@ namespace Lykke.Service.Iota.Api.Services
             });
 
             return response.Addresses[0].Balance;
+        }
+
+        public async Task<string> Broadcast(string[] trytes)
+        {
+            var depth = 8;
+            var minWeightMagnitude = 14;
+
+            var txs = trytes.Select(f => Transaction.FromTrytes(new TransactionTrytes(f)));
+
+            var transactionsToApprove = await _repository.GetTransactionsToApproveAsync(depth);
+
+            var attachResultTrytes = await _repository.AttachToTangleAsync(
+                                       transactionsToApprove.BranchTransaction,
+                                       transactionsToApprove.TrunkTransaction,
+                                       txs,
+                                       minWeightMagnitude);
+
+            await _repository.BroadcastAndStoreTransactionsAsync(attachResultTrytes);
+
+            return transactionsToApprove.BranchTransaction.Value;
         }
     }
 }

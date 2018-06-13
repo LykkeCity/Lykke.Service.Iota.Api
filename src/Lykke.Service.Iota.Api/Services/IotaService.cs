@@ -2,7 +2,12 @@
 using Lykke.Service.Iota.Api.Core.Domain;
 using Lykke.Service.Iota.Api.Core.Domain.Broadcast;
 using Lykke.Service.Iota.Api.Core.Repositories;
+using Lykke.Service.Iota.Api.Core.Services;
+using Lykke.Service.Iota.Api.Models;
+using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Tangle.Net.Entity;
 
@@ -13,18 +18,23 @@ namespace Lykke.Service.Iota.Api.Services
         private readonly ILog _log;
         private readonly IBroadcastRepository _broadcastRepository;
         private readonly IBroadcastInProgressRepository _broadcastInProgressRepository;
+        private readonly IAddressInputRepository _addressInputRepository;
+        private readonly INodeClient _nodeClient;
         private readonly int _minConfirmations;
 
         public IotaService(ILog log,
             IBroadcastRepository broadcastRepository,
             IBroadcastInProgressRepository broadcastInProgressRepository,
+            IAddressInputRepository addressInputRepository,
             IBalanceRepository balanceRepository,
-            IBalancePositiveRepository balancePositiveRepository,
+            INodeClient nodeClient,
             int minConfirmations)
         {
             _log = log;
             _broadcastRepository = broadcastRepository;
             _broadcastInProgressRepository = broadcastInProgressRepository;
+            _addressInputRepository = addressInputRepository;
+            _nodeClient = nodeClient;
             _minConfirmations = minConfirmations;
         }
 
@@ -46,14 +56,40 @@ namespace Lykke.Service.Iota.Api.Services
             return false;
         }
 
-        public object GetTransaction(string transactionHex)
+        public async Task<AddressInput[]> GetVirtualAddressInputs(string virtualAddress)
         {
-            return null;
+            var list = new List<AddressInput>();
+            var addressInputs = await _addressInputRepository.GetAsync(virtualAddress);
+
+            foreach (var addressInput in addressInputs)
+            {
+                list.Add(new AddressInput
+                {
+                    Address = addressInput.Address,
+                    Index = addressInput.Index,
+                    Balance = await _nodeClient.GetAddressBalance(addressInput.Address)
+                });
+            }
+
+            return list.ToArray();
         }
 
-        public async Task BroadcastAsync(object transaction, Guid operationId)
+        public async Task<long> GetVirtualAddressBalance(string address)
         {
-            await Task.Yield();
+            var inputs = await GetVirtualAddressInputs(address);
+
+            return inputs.Sum(f => f.Balance);
+        }
+
+        public bool ValidateSignedTransaction(string transactionHex)
+        {
+            return true;
+        }
+
+        public async Task BroadcastAsync(string signedTransaction, Guid operationId)
+        {
+            var context = JsonConvert.DeserializeObject<SignedTransactionContext>(signedTransaction);
+            var hash = await _nodeClient.Broadcast(context.Transactions);
         }
 
         public async Task<IBroadcast> GetBroadcastAsync(Guid operationId)
@@ -67,11 +103,10 @@ namespace Lykke.Service.Iota.Api.Services
             await _broadcastRepository.DeleteAsync(broadcast.OperationId);
         }
 
-        public async Task<long> GetAddressBalance(string address)
+        public class SignedTransactionContext
         {
-            await Task.Yield();
-
-            return 1000;
+            public string Hash { get; set; }
+            public string[] Transactions { get; set; }
         }
     }
 }

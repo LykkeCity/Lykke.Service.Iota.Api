@@ -4,6 +4,7 @@ using Lykke.Service.Iota.Api.Models;
 using Lykke.Service.Iota.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Lykke.Service.Iota.Api.Controllers
@@ -13,15 +14,18 @@ namespace Lykke.Service.Iota.Api.Controllers
     {
         private readonly INodeClient _nodeClient;
         private readonly IAddressRepository _addressRepository;
-        private readonly IAddressVirtualRepository _addressVirtualRepository;
+        private readonly IAddressInputRepository _addressInputRepository;
+        private readonly IIotaService _iotaService;
 
         public InternalController(INodeClient nodeClient,
             IAddressRepository addressRepository, 
-            IAddressVirtualRepository addressVirtualRepository)
+            IAddressInputRepository addressInputRepository,
+            IIotaService iotaService)
         {
             _nodeClient = nodeClient;
             _addressRepository = addressRepository;
-            _addressVirtualRepository = addressVirtualRepository;
+            _addressInputRepository = addressInputRepository;
+            _iotaService = iotaService;
         }
 
         /// <summary>
@@ -31,57 +35,37 @@ namespace Lykke.Service.Iota.Api.Controllers
         public async Task<IActionResult> PostVirtualAddress([Required] string address, 
             [FromBody] VirtualAddressRequest virtualAddressRequest)
         {
-            await _addressRepository.SaveAsync(address, virtualAddressRequest.RealAddress, virtualAddressRequest.Index);
-            await _addressVirtualRepository.SaveAsync(address, virtualAddressRequest.RealAddress, virtualAddressRequest.Index);
+            await _addressRepository.SaveAsync(address, virtualAddressRequest.RealAddress, virtualAddressRequest.Index, false);
+            await _addressInputRepository.SaveAsync(address, virtualAddressRequest.RealAddress, virtualAddressRequest.Index);
 
             return Ok();
         }
 
         /// <summary>
-        /// Returns latest used index for the provided virtual Iota address
+        /// Returns latest real address for the provided virtual Iota address
         /// </summary>
         [HttpGet("virtual-address/{address}/real")]
         public async Task<IActionResult> GetVirtualAddressRealAddress([Required] string address)
         {
-            var addressVirtual = await _addressVirtualRepository.GetAsync(address);
-            if (addressVirtual == null)
+            var addressInputs = await _addressInputRepository.GetAsync(address);
+            if (addressInputs == null || addressInputs.Count() == 0)
             {
                 return NotFound();
             }
 
-            return Ok(addressVirtual.LatestAddress);
+            var latestIndex = addressInputs.Max(f => f.Index);
+            var latestAddress = addressInputs.First(f => f.Index == latestIndex);
+
+            return Ok(latestAddress.Address);
         }
 
         /// <summary>
-        /// Returns latest used index for the provided virtual Iota address
+        /// Returns available inputs for the provided virtual Iota address
         /// </summary>
-        [HttpGet("virtual-address/{address}/index")]
-        public async Task<IActionResult> GetVirtualAddressIndex([Required] string address)
+        [HttpGet("virtual-address/{address}/inputs")]
+        public async Task<AddressInput[]> GetVirtualAddressIndex([Required] string address)
         {
-            var addressVirtual = await _addressVirtualRepository.GetAsync(address);
-            if (addressVirtual == null)
-            {
-                return NotFound();
-            }
-
-            return Ok(addressVirtual.LatestAddressIndex);
-        }
-
-        /// <summary>
-        /// Returns virtual Iota address balance
-        /// </summary>
-        [HttpGet("virtual-address/{address}/balance")]
-        public async Task<IActionResult> GetVirtualAddressBalance([Required] string address)
-        {
-            var addressVirtual = await _addressVirtualRepository.GetAsync(address);
-            if (addressVirtual == null)
-            {
-                return NotFound();
-            }
-
-            var fromAddressBalance = await _nodeClient.GetAddressBalance(addressVirtual.LatestAddress);
-
-            return Ok(fromAddressBalance);
+            return await _iotaService.GetVirtualAddressInputs(address);
         }
     }
 }
