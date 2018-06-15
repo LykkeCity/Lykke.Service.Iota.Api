@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Tangle.Net.Entity;
 using Tangle.Net.Repository;
 using System;
+using Tangle.Net.ProofOfWork;
 
 namespace Lykke.Service.Iota.Api.Services
 {
@@ -19,7 +20,7 @@ namespace Lykke.Service.Iota.Api.Services
         {
             _log = log;
 
-            _repository = new RestIotaRepository(new RestClient(nodeUrl));
+            _repository = new RestIotaRepository(new RestClient(nodeUrl), new PoWService(new CpuPearlDiver()));
         }
 
         public async Task<long> GetAddressBalance(string address)
