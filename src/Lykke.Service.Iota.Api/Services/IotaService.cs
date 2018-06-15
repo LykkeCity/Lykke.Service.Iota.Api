@@ -89,7 +89,8 @@ namespace Lykke.Service.Iota.Api.Services
         public async Task BroadcastAsync(string signedTransaction, Guid operationId)
         {
             var context = JsonConvert.DeserializeObject<SignedTransactionContext>(signedTransaction);
-            var hash = await _nodeClient.Broadcast(context.Transactions);
+
+            await _nodeClient.Broadcast(context.Transactions);
         }
 
         public async Task<IBroadcast> GetBroadcastAsync(Guid operationId)
