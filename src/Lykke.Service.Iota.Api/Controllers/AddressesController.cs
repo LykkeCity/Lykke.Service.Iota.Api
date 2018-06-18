@@ -1,5 +1,5 @@
 ﻿using Lykke.Service.BlockchainApi.Contract.Addresses;
-using Lykke.Service.Iota.Api.Services;
+using Lykke.Service.Iota.Api.Core.Services;
 using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
 using System.Net;

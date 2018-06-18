@@ -1,7 +1,7 @@
 ﻿using Lykke.Service.Iota.Api.Core.Shared;
 using System.Threading.Tasks;
 
-namespace Lykke.Service.Iota.Api.Services
+namespace Lykke.Service.Iota.Api.Core.Services
 {
     public interface IIotaService
     {

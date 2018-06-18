@@ -11,7 +11,7 @@ using Lykke.Service.BlockchainApi.Contract;
 using Lykke.Service.BlockchainApi.Contract.Balances;
 using Lykke.Service.Iota.Api.Core.Repositories;
 using Lykke.Service.Iota.Api.Helpers;
-using Lykke.Service.Iota.Api.Services;
+using Lykke.Service.Iota.Api.Core.Services;
 
 namespace Lykke.Service.Iota.Api.Controllers
 {

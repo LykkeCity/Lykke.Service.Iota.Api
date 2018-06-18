@@ -39,7 +39,7 @@ namespace Lykke.Service.Iota.Api.Controllers
             INodeClient nodeClient,
             IIotaService iotaService)
         {
-            _log = log;
+            _log = log.CreateComponentScope(nameof(TransactionsController));
             _buildRepository = buildRepository;
             _addressInputRepository = addressInputRepository;
             _broadcastRepository = broadcastRepository;
@@ -166,8 +166,7 @@ namespace Lykke.Service.Iota.Api.Controllers
                 return BadRequest(ErrorResponse.Create($"{nameof(request.SignedTransaction)} is not a valid"));
             }
 
-            await _log.WriteInfoAsync(nameof(TransactionsController), nameof(Broadcast),
-                request.ToJson(), "Broadcast transaction");
+            _log.WriteInfo(nameof(Broadcast), request.ToJson(), "Broadcast transaction");
 
             var result = await _nodeClient.Broadcast(context.Transactions);
 

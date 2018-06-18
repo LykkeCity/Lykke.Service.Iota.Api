@@ -11,6 +11,7 @@ using Tangle.Net.ProofOfWork;
 using Tangle.Net.Repository.DataTransfer;
 using Tangle.Net.Repository.Client;
 using Tangle.Net.Repository.Responses;
+using Common;
 
 namespace Lykke.Service.Iota.Api.Services
 {
@@ -82,10 +83,19 @@ namespace Lykke.Service.Iota.Api.Services
 
         public async Task<(string Hash, long Block)> Broadcast(string[] trytes)
         {
+            _log.WriteInfo(nameof(Broadcast), "", "Get txs from trytes");
             var txs = trytes.Select(f => Transaction.FromTrytes(new TransactionTrytes(f)));
+
+            _log.WriteInfo(nameof(Broadcast), "", "Send txs");
             var txsTrities = await _repository.SendTrytesAsync(txs);
+
+            _log.WriteInfo(nameof(Broadcast), "", "Get broadcated txs");
             var txsBroadcasted = txsTrities.Select(f => Transaction.FromTrytes(f)).ToList();
+
+            _log.WriteInfo(nameof(Broadcast), "", "Get tailed tx");
             var tailTx = txsBroadcasted.Where(f => f.IsTail).First();
+
+            _log.WriteInfo(nameof(Broadcast), tailTx.ToJson(), "Tailed tx");
 
             return (tailTx.Hash.Value, tailTx.Timestamp);
         }

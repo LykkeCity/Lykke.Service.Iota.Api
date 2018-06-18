@@ -18,6 +18,7 @@ namespace Lykke.Service.Iota.Job.Services
         private readonly IBalanceRepository _balanceRepository;
         private readonly IBalancePositiveRepository _balancePositiveRepository;
         private readonly INodeClient _nodeClient;
+        private readonly IIotaService _iotaService;
         private readonly int _minConfirmations;
 
         public PeriodicalService(ILog log,
@@ -27,6 +28,7 @@ namespace Lykke.Service.Iota.Job.Services
             IBalanceRepository balanceRepository,
             IBalancePositiveRepository balancePositiveRepository,
             INodeClient nodeClient,
+            IIotaService iotaService,
             int minConfirmations)
         {
             _log = log.CreateComponentScope(nameof(PeriodicalService));
@@ -36,6 +38,7 @@ namespace Lykke.Service.Iota.Job.Services
             _balanceRepository = balanceRepository;
             _balancePositiveRepository = balancePositiveRepository;
             _nodeClient = nodeClient;
+            _iotaService = iotaService;
             _minConfirmations = minConfirmations;
         }
 
@@ -62,7 +65,7 @@ namespace Lykke.Service.Iota.Job.Services
 
                     _chaosKitty.Meow(item.OperationId);
 
-                    await RefreshBalances(item.Hash);
+                    //await RefreshBalances(item.Hash);
                 }
             }
         }
@@ -109,54 +112,53 @@ namespace Lykke.Service.Iota.Job.Services
             }
         }
 
-        private async Task RefreshBalances(string hash)
-        {
-            var addresses = await _nodeClient.GetBundleAddresses(hash);
+        //private async Task RefreshBalances(string hash)
+        //{
+        //    var addresses = await _nodeClient.GetBundleAddresses(hash);
 
-            foreach (var address in addresses)
-            {
-                var balance = await _balanceRepository.GetAsync(address);
-                if (balance != null)
-                {
-                    await RefreshAddressBalance(address, true);
-                }
-            }
-        }
+        //    foreach (var address in addresses)
+        //    {
+        //        var balance = await _balanceRepository.GetAsync(address);
+        //        if (balance != null)
+        //        {
+        //            await RefreshAddressBalance(address, true);
+        //        }
+        //    }
+        //}
 
-        private async Task<decimal> RefreshAddressBalance(string address, bool deleteZeroBalance)
+        private async Task<decimal> RefreshAddressBalance(string virtualAddress, bool deleteZeroBalance)
         {
-            var balance = await _nodeClient.GetAddressBalance(address, _minConfirmations);
+            var balance = await _iotaService.GetVirtualAddressBalance(virtualAddress);
             if (balance > 0)
             {
                 var block = Timestamp.UnixSecondsTimestamp;
 
-                var balancePositive = await _balancePositiveRepository.GetAsync(address);
+                var balancePositive = await _balancePositiveRepository.GetAsync(virtualAddress);
                 if (balancePositive == null)
                 {
-                    _log.WriteInfo(nameof(RefreshAddressBalance),
-                        new { address, balance, block },
+                    _log.WriteInfo(nameof(RefreshAddressBalance), new { virtualAddress, balance, block },
                         $"Positive balance is detected");
                 }
                 if (balancePositive != null && balancePositive.Amount != balance)
                 {
                     _log.WriteInfo(nameof(RefreshAddressBalance),
-                        new { address, balance, oldBalance = balancePositive.Amount, block },
+                        new { virtualAddress, balance, oldBalance = balancePositive.Amount, block },
                         $"Change in positive balance is detected");
                 }
 
-                await _balancePositiveRepository.SaveAsync(address, balance, block);
+                await _balancePositiveRepository.SaveAsync(virtualAddress, balance, block);
 
-                _chaosKitty.Meow(new { address, balance, block }.ToJson());
+                _chaosKitty.Meow(new { virtualAddress, balance, block }.ToJson());
             }
 
             if (balance == 0 && deleteZeroBalance)
             {
-                _log.WriteInfo(nameof(RefreshAddressBalance), new { address },
+                _log.WriteInfo(nameof(RefreshAddressBalance), new { virtualAddress },
                     $"Zero balance is detected");
 
-                await _balancePositiveRepository.DeleteAsync(address);
+                await _balancePositiveRepository.DeleteAsync(virtualAddress);
 
-                _chaosKitty.Meow(address);
+                _chaosKitty.Meow(virtualAddress);
             }
 
             return balance;
