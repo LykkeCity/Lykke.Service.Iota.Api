@@ -7,7 +7,7 @@ using Lykke.SettingsReader;
 using Lykke.Service.Iota.Api.Core.Domain.Address;
 using Lykke.Service.Iota.Api.Core.Repositories;
 
-namespace Lykke.Service.Iota.Api.AzureRepositories.Address
+namespace Lykke.Service.Iota.Api.AzureRepositories
 {
     public class AddressRepository : IAddressRepository
     {

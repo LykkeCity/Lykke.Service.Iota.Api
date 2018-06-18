@@ -3,7 +3,7 @@ using Lykke.AzureStorage.Tables.Entity.Annotation;
 using Lykke.AzureStorage.Tables.Entity.ValueTypesMerging;
 using Lykke.Service.Iota.Api.Core.Domain.Address;
 
-namespace Lykke.Service.Iota.Api.AzureRepositories.AddressVirtual
+namespace Lykke.Service.Iota.Api.AzureRepositories
 {
     [ValueTypeMergingStrategy(ValueTypeMergingStrategy.UpdateAlways)]
     internal class AddressInputEntity : AzureTableEntity, IAddressInput

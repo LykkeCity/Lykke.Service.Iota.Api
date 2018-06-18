@@ -69,6 +69,14 @@ namespace Lykke.Service.Iota.Api.Controllers
             return await _iotaService.GetVirtualAddressInputs(address);
         }
 
+        [HttpGet("address/{hash}/can-spent")]
+        public async Task<bool> PromoteBundle([Required] string hash)
+        {
+            var result = await _nodeClient.WereAddressesSpentFrom(hash);
+
+            return !result;
+        }
+
         [HttpGet("bundle/{hash}/reattach")]
         public async Task ReattachBundle([Required] string hash)
         {

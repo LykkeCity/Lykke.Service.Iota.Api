@@ -104,11 +104,19 @@ namespace Lykke.Service.Iota.Job.Services
                 var included = await _nodeClient.TransactionIncluded(item.Hash);
                 if (!included)
                 {
-                    _log.WriteInfo(nameof(UpdateBroadcasts), new { item.Hash },
-                        $"Promotions for transaction is detected");
+                    _log.WriteInfo(nameof(UpdateBroadcasts), new { item.Hash }, $"Promote transaction");
+                    await _nodeClient.Promote(item.Hash, 5);
 
-                    await _nodeClient.Promote(item.Hash);
-                }
+                    included = await _nodeClient.TransactionIncluded(item.Hash);
+                    if (!included)
+                    {
+                        _log.WriteInfo(nameof(UpdateBroadcasts), new { item.Hash }, $"Reattach transaction");
+                        var result = await _nodeClient.Reattach(item.Hash);
+
+                        await _broadcastRepository.UpdateHashAsync(item.OperationId, result.Hash, result.Block);
+                        await _broadcastInProgressRepository.UpdateHashAsync(item.OperationId, result.Hash);
+                    }
+                }                
             }
         }
 

@@ -8,7 +8,7 @@ using Lykke.Service.Iota.Api.Core.Repositories;
 using Common;
 using Common.Log;
 
-namespace Lykke.Service.Iota.Api.AzureRepositories.Balance
+namespace Lykke.Service.Iota.Api.AzureRepositories
 {
     public class BalanceRepository : IBalanceRepository
     {

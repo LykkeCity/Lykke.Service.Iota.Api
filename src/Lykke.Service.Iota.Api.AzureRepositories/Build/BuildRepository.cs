@@ -8,7 +8,7 @@ using AzureStorage.Tables;
 using Common.Log;
 using Common;
 
-namespace Lykke.Service.Iota.Api.AzureRepositories.Build
+namespace Lykke.Service.Iota.Api.AzureRepositories
 {
     public class BuildRepository : IBuildRepository
     {

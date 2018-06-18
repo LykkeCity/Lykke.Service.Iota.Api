@@ -12,6 +12,7 @@ namespace Lykke.Service.Iota.Job.Settings
         public int MinConfirmations { get; set; }
         public TimeSpan BalanceCheckerInterval { get; set; }
         public TimeSpan BroadcastCheckerInterval { get; set; }
+        public TimeSpan PromotionHandlerInterval { get; set; }
 
         [Optional]
         public ChaosSettings ChaosKitty { get; set; }

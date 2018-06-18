@@ -8,7 +8,7 @@ using Lykke.Service.Iota.Api.Core.Domain.Balance;
 using Lykke.Service.Iota.Api.Core.Repositories;
 using Common;
 
-namespace Lykke.Service.Iota.Api.AzureRepositories.BalancePositive
+namespace Lykke.Service.Iota.Api.AzureRepositories
 {
     public class BalancePositiveRepository : IBalancePositiveRepository
     {

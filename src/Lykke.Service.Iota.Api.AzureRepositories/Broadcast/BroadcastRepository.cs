@@ -8,7 +8,7 @@ using Lykke.Service.Iota.Api.Core.Domain.Broadcast;
 using Lykke.Service.Iota.Api.Core.Repositories;
 using Common;
 
-namespace Lykke.Service.Iota.Api.AzureRepositories.Broadcast
+namespace Lykke.Service.Iota.Api.AzureRepositories
 {
     public class BroadcastRepository : IBroadcastRepository
     {
@@ -36,6 +36,17 @@ namespace Lykke.Service.Iota.Api.AzureRepositories.Broadcast
                 State = BroadcastState.InProgress,
                 Hash = hash,
                 Block = block
+            });
+        }
+
+        public async Task UpdateHashAsync(Guid operationId, string hash, long block)
+        {
+            await _table.ReplaceAsync(GetPartitionKey(operationId), GetRowKey(operationId), x =>
+            {
+                x.Hash = hash;
+                x.Block = block;
+
+                return x;
             });
         }
 

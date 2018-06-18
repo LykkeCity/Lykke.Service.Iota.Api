@@ -5,6 +5,7 @@ namespace Lykke.Service.Iota.Api.Core.Services
     public interface INodeClient
     {
         Task<long> GetAddressBalance(string address, int threshold);
+        Task<bool> WereAddressesSpentFrom(string address);
         Task<(long Value, long Block)> GetTransactionInfo(string hash);
         Task<bool> TransactionIncluded(string tailTxHash);
         Task<string[]> GetBundleAddresses(string tailTxHash);

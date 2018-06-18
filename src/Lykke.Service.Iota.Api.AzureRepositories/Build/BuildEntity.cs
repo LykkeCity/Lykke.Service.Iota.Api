@@ -4,7 +4,7 @@ using Lykke.AzureStorage.Tables.Entity.Annotation;
 using Lykke.AzureStorage.Tables.Entity.ValueTypesMerging;
 using Lykke.Service.Iota.Api.Core.Domain.Build;
 
-namespace Lykke.Service.Iota.Api.AzureRepositories.Build
+namespace Lykke.Service.Iota.Api.AzureRepositories
 {
     [ValueTypeMergingStrategy(ValueTypeMergingStrategy.UpdateAlways)]
     internal class BuildEntity : AzureTableEntity, IBuild

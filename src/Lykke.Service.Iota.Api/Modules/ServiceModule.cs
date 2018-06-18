@@ -1,17 +1,11 @@
 ﻿using Autofac;
 using Common.Log;
 using Lykke.SettingsReader;
-using Lykke.Service.Iota.Api.AzureRepositories.BroadcastInProgress;
 using Lykke.Service.Iota.Api.Core.Services;
 using Lykke.Service.Iota.Api.Core.Repositories;
 using Lykke.Service.Iota.Api.Services;
-using Lykke.Service.Iota.Api.AzureRepositories.Balance;
-using Lykke.Service.Iota.Api.AzureRepositories.BalancePositive;
-using Lykke.Service.Iota.Api.AzureRepositories.Broadcast;
-using Lykke.Service.Iota.Api.AzureRepositories.Build;
-using Lykke.Service.Iota.Api.AzureRepositories.AddressVirtual;
-using Lykke.Service.Iota.Api.AzureRepositories.Address;
 using Lykke.Service.Iota.Api.Settings;
+using Lykke.Service.Iota.Api.AzureRepositories;
 
 namespace Lykke.Service.Iota.Api.Modules
 {

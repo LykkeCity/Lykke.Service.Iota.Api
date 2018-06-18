@@ -39,6 +39,13 @@ namespace Lykke.Service.Iota.Api.Services
             return response.Addresses[0].Balance;
         }
 
+        public async Task<bool> WereAddressesSpentFrom(string address)
+        {
+            var response = await _repository.WereAddressesSpentFromAsync(new List<Address> { new Address(address) });
+
+            return response.First().SpentFrom;
+        }
+
         public async Task<string[]> GetBundleAddresses(string tailTxHash)
         {
             var bundle = await _repository.GetBundleAsync(new Hash(tailTxHash));

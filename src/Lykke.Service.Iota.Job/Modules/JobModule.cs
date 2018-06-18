@@ -1,17 +1,14 @@
 ﻿using Autofac;
 using Common.Log;
-using Lykke.Service.Iota.Api.AzureRepositories.BroadcastInProgress;
 using Lykke.Service.Iota.Api.Core.Services;
 using Lykke.Service.Iota.Api.Core.Repositories;
 using Lykke.Service.Iota.Api.Services;
 using Lykke.SettingsReader;
-using Lykke.Service.Iota.Api.AzureRepositories.Balance;
-using Lykke.Service.Iota.Api.AzureRepositories.BalancePositive;
 using Lykke.Service.Iota.Job.PeriodicalHandlers;
-using Lykke.Service.Iota.Api.AzureRepositories.Broadcast;
 using Lykke.Service.Iota.Job.Settings;
 using Lykke.Service.Iota.Job.Services;
 using Lykke.Common.Chaos;
+using Lykke.Service.Iota.Api.AzureRepositories;
 
 namespace Lykke.Service.Iota.Job.Modules
 {
@@ -46,6 +43,16 @@ namespace Lykke.Service.Iota.Job.Modules
             builder.RegisterType<ShutdownManager>()
                 .As<IShutdownManager>();
 
+            builder.RegisterType<AddressRepository>()
+                .As<IAddressRepository>()
+                .WithParameter(TypedParameter.From(connectionStringManager))
+                .SingleInstance();
+
+            builder.RegisterType<AddressInputRepository>()
+                .As<IAddressInputRepository>()
+                .WithParameter(TypedParameter.From(connectionStringManager))
+                .SingleInstance();
+
             builder.RegisterType<BroadcastRepository>()
                 .As<IBroadcastRepository>()
                 .WithParameter(TypedParameter.From(connectionStringManager))
@@ -66,6 +73,11 @@ namespace Lykke.Service.Iota.Job.Modules
                 .WithParameter(TypedParameter.From(connectionStringManager))
                 .SingleInstance();
 
+            builder.RegisterType<BuildRepository>()
+                .As<IBuildRepository>()
+                .WithParameter(TypedParameter.From(connectionStringManager))
+                .SingleInstance();
+
             builder.RegisterType<PeriodicalService>()
                 .As<IPeriodicalService>()
                 .WithParameter(TypedParameter.From(_settings.CurrentValue.MinConfirmations))
@@ -74,6 +86,11 @@ namespace Lykke.Service.Iota.Job.Modules
             builder.RegisterType<NodeClient>()
                 .As<INodeClient>()
                 .WithParameter("nodeUrl", _settings.CurrentValue.NodeUrl)
+                .SingleInstance();
+
+            builder.RegisterType<IotaService>()
+                .As<IIotaService>()
+                .WithParameter("minConfirmations", _settings.CurrentValue.MinConfirmations)
                 .SingleInstance();
 
             builder.RegisterType<BalanceHandler>()
@@ -86,6 +103,12 @@ namespace Lykke.Service.Iota.Job.Modules
                 .As<IStartable>()
                 .AutoActivate()
                 .WithParameter("period", _settings.CurrentValue.BroadcastCheckerInterval)
+                .SingleInstance();
+
+            builder.RegisterType<PromotionHandler>()
+                .As<IStartable>()
+                .AutoActivate()
+                .WithParameter("period", _settings.CurrentValue.PromotionHandlerInterval)
                 .SingleInstance();
         }
     }

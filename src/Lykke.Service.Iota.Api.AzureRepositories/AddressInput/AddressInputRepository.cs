@@ -8,7 +8,7 @@ using Lykke.Service.Iota.Api.Core.Domain.Address;
 using Lykke.Service.Iota.Api.Core.Repositories;
 using System.Collections.Generic;
 
-namespace Lykke.Service.Iota.Api.AzureRepositories.AddressVirtual
+namespace Lykke.Service.Iota.Api.AzureRepositories
 {
     public class AddressInputRepository : IAddressInputRepository
     {

@@ -4,7 +4,7 @@ using Lykke.AzureStorage.Tables.Entity.Annotation;
 using Lykke.AzureStorage.Tables.Entity.ValueTypesMerging;
 using Lykke.Service.Iota.Api.Core.Domain.Broadcast;
 
-namespace Lykke.Service.Iota.Api.AzureRepositories.Broadcast
+namespace Lykke.Service.Iota.Api.AzureRepositories
 {
     [ValueTypeMergingStrategy(ValueTypeMergingStrategy.UpdateAlways)]
     internal class BroadcastEntity : AzureTableEntity, IBroadcast
