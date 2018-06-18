@@ -33,7 +33,7 @@ namespace Lykke.Service.Iota.Api.AzureRepositories.Broadcast
                 PartitionKey = GetPartitionKey(operationId),
                 RowKey = GetRowKey(operationId),
                 BroadcastedUtc = DateTime.UtcNow,
-                State = BroadcastState.Broadcasted,
+                State = BroadcastState.InProgress,
                 Hash = hash,
                 Block = block
             });

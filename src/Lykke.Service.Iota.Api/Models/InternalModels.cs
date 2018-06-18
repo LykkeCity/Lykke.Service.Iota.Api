@@ -14,13 +14,4 @@ namespace Lykke.Service.Iota.Api.Models
         [Required]
         public long Index { get; set; }
     }
-
-    public class AddressInput
-    {
-        public string Address { get; set; }
-
-        public long Index { get; set; }
-
-        public long Balance { get; set; }
-    }
 }

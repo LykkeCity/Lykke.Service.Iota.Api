@@ -51,7 +51,7 @@ namespace Lykke.Service.Iota.Api.Helpers
         {
             switch (self)
             {
-                case BroadcastState.Broadcasted:
+                case BroadcastState.InProgress:
                     return BroadcastedTransactionState.InProgress;
                 case BroadcastState.Completed:
                     return BroadcastedTransactionState.Completed;
@@ -68,7 +68,7 @@ namespace Lykke.Service.Iota.Api.Helpers
         {
             switch (self.State)
             {
-                case BroadcastState.Broadcasted:
+                case BroadcastState.InProgress:
                     return self.BroadcastedUtc.Value;
                 case BroadcastState.Completed:
                     return self.CompletedUtc.Value;

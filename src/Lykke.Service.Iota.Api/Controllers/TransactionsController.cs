@@ -1,9 +1,11 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Http;
+﻿using System;
 using System.Net;
-using System;
+using System.Linq;
 using System.Threading.Tasks;
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
+using Newtonsoft.Json;
 using Common;
 using Common.Log;
 using Lykke.Common.Api.Contract.Responses;
@@ -11,8 +13,10 @@ using Lykke.Service.BlockchainApi.Contract.Transactions;
 using Lykke.Service.BlockchainApi.Contract;
 using Lykke.Service.Iota.Api.Core.Domain;
 using Lykke.Service.Iota.Api.Core.Repositories;
-using Lykke.Service.Iota.Api.Services;
 using Lykke.Service.Iota.Api.Helpers;
+using Lykke.Service.Iota.Api.Core.Shared;
+using Lykke.Service.Iota.Api.Core.Services;
+using Lykke.Service.Iota.Api.Services;
 
 namespace Lykke.Service.Iota.Api.Controllers
 {
@@ -20,19 +24,28 @@ namespace Lykke.Service.Iota.Api.Controllers
     public class TransactionsController : Controller
     {
         private readonly ILog _log;
-        private readonly IIotaService _iotaService;
         private readonly IBuildRepository _buildRepository;
-        private readonly IAddressInputRepository _addressVirtualRepository;
+        private readonly IAddressInputRepository _addressInputRepository;
+        private readonly IBroadcastRepository _broadcastRepository;
+        private readonly IBroadcastInProgressRepository _broadcastInProgressRepository;
+        private readonly INodeClient _nodeClient;
+        private readonly IIotaService _iotaService;
 
         public TransactionsController(ILog log, 
-            IIotaService iotaService,
             IBuildRepository buildRepository,
-            IAddressInputRepository addressVirtualRepository)
+            IAddressInputRepository addressInputRepository,
+            IBroadcastRepository broadcastRepository,
+            IBroadcastInProgressRepository broadcastInProgressRepository,
+            INodeClient nodeClient,
+            IIotaService iotaService)
         {
             _log = log;
-            _iotaService = iotaService;
             _buildRepository = buildRepository;
-            _addressVirtualRepository = addressVirtualRepository;
+            _addressInputRepository = addressInputRepository;
+            _broadcastRepository = broadcastRepository;
+            _broadcastInProgressRepository = broadcastInProgressRepository;
+            _nodeClient = nodeClient;
+            _iotaService = iotaService;
         }
 
         [HttpPost("single")]
@@ -61,8 +74,8 @@ namespace Lykke.Service.Iota.Api.Controllers
                 return BadRequest(ErrorResponse.Create($"{nameof(request.Amount)} can not be converted to long"));
             }
 
-            var addressVirtual = await _addressVirtualRepository.GetAsync(request.FromAddress);
-            if (addressVirtual == null)
+            var addressInputs = await _addressInputRepository.GetAsync(request.FromAddress);
+            if (!addressInputs.Any())
             {
                 return BadRequest(ErrorResponse.Create($"{nameof(request.FromAddress)} was not found"));
             }
@@ -141,13 +154,14 @@ namespace Lykke.Service.Iota.Api.Controllers
                 return BadRequest(ModelState.ToErrorResponse());
             }
 
-            var broadcast = await _iotaService.GetBroadcastAsync(request.OperationId);
+            var broadcast = await _broadcastRepository.GetAsync(request.OperationId);
             if (broadcast != null)
             {
                 return new StatusCodeResult(StatusCodes.Status409Conflict);
             }
 
-            if (!_iotaService.ValidateSignedTransaction(request.SignedTransaction))
+            var context = JsonConvert.DeserializeObject<SignedTransactionContext>(request.SignedTransaction);
+            if (context == null || string.IsNullOrEmpty(context.Hash) || context.Transactions == null || !context.Transactions.Any())
             {
                 return BadRequest(ErrorResponse.Create($"{nameof(request.SignedTransaction)} is not a valid"));
             }
@@ -155,7 +169,10 @@ namespace Lykke.Service.Iota.Api.Controllers
             await _log.WriteInfoAsync(nameof(TransactionsController), nameof(Broadcast),
                 request.ToJson(), "Broadcast transaction");
 
-            await _iotaService.BroadcastAsync(request.SignedTransaction, request.OperationId);
+            var result = await _nodeClient.Broadcast(context.Transactions);
+
+            await _broadcastRepository.AddAsync(request.OperationId, result.Hash, result.Block);
+            await _broadcastInProgressRepository.AddAsync(request.OperationId, result.Hash);
 
             return Ok();
         }
@@ -164,25 +181,19 @@ namespace Lykke.Service.Iota.Api.Controllers
         [ProducesResponseType(typeof(BroadcastedSingleTransactionResponse), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetBroadcast([Required] Guid operationId)
         {
-            var broadcast = await _iotaService.GetBroadcastAsync(operationId);
+            var broadcast = await _broadcastRepository.GetAsync(operationId);
             if (broadcast == null)
             {
                 return NoContent();
             }
-
-            var amount = broadcast.Amount.HasValue ?
-                Conversions.CoinsToContract(broadcast.Amount.Value, Asset.Miota.Accuracy) : "";
-
-            var fee = broadcast.Fee.HasValue ?
-                Conversions.CoinsToContract(broadcast.Fee.Value, Asset.Miota.Accuracy) : "";
 
             return Ok(new BroadcastedSingleTransactionResponse
             {
                 OperationId = broadcast.OperationId,
                 Hash = broadcast.Hash,
                 State = broadcast.State.ToBroadcastedTransactionState(),
-                Amount = amount,
-                Fee = fee,
+                Amount = broadcast.Amount.HasValue ? broadcast.Amount.Value.ToString() : "",
+                Fee = broadcast.Fee.HasValue ? broadcast.Fee.Value.ToString() : "",
                 Error = broadcast.Error,
                 Timestamp = broadcast.GetTimestamp(),
                 Block = broadcast.Block
@@ -192,7 +203,7 @@ namespace Lykke.Service.Iota.Api.Controllers
         [HttpDelete("broadcast/{operationId}")]
         public async Task<IActionResult> DeleteBroadcast([Required] Guid operationId)
         {
-            var broadcast = await _iotaService.GetBroadcastAsync(operationId);
+            var broadcast = await _broadcastRepository.GetAsync(operationId);
             if (broadcast == null)
             {
                 return NoContent();
@@ -202,8 +213,9 @@ namespace Lykke.Service.Iota.Api.Controllers
                 new { operationId = operationId }.ToJson(), 
                 "Delete broadcast");
 
-            await _buildRepository.DeleteAsync(operationId);
-            await _iotaService.DeleteBroadcastAsync(broadcast);
+            await _buildRepository.DeleteAsync(broadcast.OperationId);
+            await _broadcastInProgressRepository.DeleteAsync(broadcast.OperationId);
+            await _broadcastRepository.DeleteAsync(broadcast.OperationId);
 
             return Ok();
         }

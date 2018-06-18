@@ -82,7 +82,7 @@ namespace Lykke.Service.Iota.Api.Modules
             builder.RegisterType<NodeClient>()
                 .As<INodeClient>()
                 .WithParameter("nodeUrl", _settings.CurrentValue.NodeUrl)
-                .SingleInstance();            
+                .SingleInstance();
 
             builder.RegisterType<IotaService>()
                 .As<IIotaService>()

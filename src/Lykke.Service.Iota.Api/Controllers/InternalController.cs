@@ -1,5 +1,6 @@
 ﻿using Lykke.Service.Iota.Api.Core.Repositories;
 using Lykke.Service.Iota.Api.Core.Services;
+using Lykke.Service.Iota.Api.Core.Shared;
 using Lykke.Service.Iota.Api.Models;
 using Lykke.Service.Iota.Api.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -74,10 +75,16 @@ namespace Lykke.Service.Iota.Api.Controllers
             await _nodeClient.Reattach(hash);
         }
 
-        [HttpGet("bundle/{hash}/promote")]
+        [HttpGet("tx/{hash}/promote")]
         public async Task PromoteBundle([Required] string hash, [Required] int attemts)
         {
             await _nodeClient.Promote(hash, attemts);
+        }
+
+        [HttpGet("tx/{hash}/included")]
+        public async Task<bool> BundleIncluded([Required] string hash)
+        {
+            return await _nodeClient.TransactionIncluded(hash);
         }
     }
 }
