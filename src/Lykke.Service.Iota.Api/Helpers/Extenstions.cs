@@ -85,7 +85,7 @@ namespace Lykke.Service.Iota.Api.Helpers
             {
                 Address = self.Address,
                 AssetId = Asset.Miota.Id,
-                Balance = Conversions.CoinsToContract(self.Amount, Asset.Miota.Accuracy),
+                Balance = self.Amount.ToString(),
                 Block = self.Block
             };
         }

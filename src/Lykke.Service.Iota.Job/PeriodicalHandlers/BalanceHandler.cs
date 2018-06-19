@@ -22,7 +22,7 @@ namespace Lykke.Service.Iota.Job.PeriodicalHandlers
         {
             try
             {
-                //await _periodicalService.UpdateBalances();
+                await _periodicalService.UpdateBalances();
             }
             catch (Exception ex)
             {
