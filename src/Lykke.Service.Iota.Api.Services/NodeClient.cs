@@ -57,9 +57,9 @@ namespace Lykke.Service.Iota.Api.Services
                 .ToArray();
         }
 
-        public async Task<bool> TransactionIncluded(string tailTxHash)
+        public async Task<bool> TransactionIncluded(string hash)
         {
-            var hashObj = new Hash(tailTxHash);
+            var hashObj = new Hash(hash);
 
             var result = await _repository.GetLatestInclusionAsync(new List<Hash> { hashObj });
             if (result != null)
@@ -73,12 +73,28 @@ namespace Lykke.Service.Iota.Api.Services
             return false;
         }
 
+        public async Task<(bool Included, string TxHash, long TxValue, long TxBlock)> GetBundleInfo(string hash)
+        {
+            var tx = await GetTransaction(hash);
+            var txsHashes = await _repository.FindTransactionsByBundlesAsync(new List<Hash> { tx.BundleHash });
+            var txs = await GetTransactions(txsHashes.Hashes);
+            var txsTail = txs.Where(f => f.IsTail).OrderByDescending(f => f.AttachmentTimestamp);
+            var txLatest = txsTail.First();
+
+            foreach (var txTail in txsTail)
+            {
+                if (await TransactionIncluded(txTail.Hash.Value))
+                {
+                    return (true, txTail.Hash.Value, txTail.Value, txTail.AttachmentTimestamp);
+                }
+            }
+
+            return (false, txLatest.Hash.Value, txLatest.Value, txLatest.AttachmentTimestamp);
+        }
+
         public async Task<(long Value, long Block)> GetTransactionInfo(string hash)
         {
-            var hashObj = new Hash(hash);
-
-            var result = await _repository.GetTrytesAsync(new List<Hash> { hashObj });
-            var tx = Transaction.FromTrytes(result.First());
+            var tx = await GetTransaction(hash);
 
             return (tx.Value, tx.AttachmentTimestamp);
         }
@@ -151,6 +167,20 @@ namespace Lykke.Service.Iota.Api.Services
 
                 await _repository.BroadcastAndStoreTransactionsAsync(attachResultTrytes);
             }
+        }
+
+        private async Task<Transaction> GetTransaction(string hash)
+        {
+            var txTrytes = await _repository.GetTrytesAsync(new List<Hash> { new Hash(hash) });
+
+            return Transaction.FromTrytes(txTrytes.First());
+        }
+
+        private async Task<List<Transaction>> GetTransactions(List<Hash> hashes)
+        {
+            var txTrytes = await _repository.GetTrytesAsync(hashes);
+
+            return txTrytes.Select(f => Transaction.FromTrytes(f)).ToList();
         }
     }
 }

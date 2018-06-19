@@ -6,6 +6,7 @@ using System.Linq;
 using Lykke.Common.Chaos;
 using Common;
 using Tangle.Net.Utils;
+using System;
 
 namespace Lykke.Service.Iota.Job.Services
 {
@@ -17,6 +18,7 @@ namespace Lykke.Service.Iota.Job.Services
         private readonly IBroadcastInProgressRepository _broadcastInProgressRepository;
         private readonly IBalanceRepository _balanceRepository;
         private readonly IBalancePositiveRepository _balancePositiveRepository;
+        private readonly IAddressInputRepository _addressInputRepository;
         private readonly INodeClient _nodeClient;
         private readonly IIotaService _iotaService;
         private readonly int _minConfirmations;
@@ -27,6 +29,7 @@ namespace Lykke.Service.Iota.Job.Services
             IBroadcastInProgressRepository broadcastInProgressRepository,
             IBalanceRepository balanceRepository,
             IBalancePositiveRepository balancePositiveRepository,
+            IAddressInputRepository addressInputRepository,
             INodeClient nodeClient,
             IIotaService iotaService,
             int minConfirmations)
@@ -37,6 +40,7 @@ namespace Lykke.Service.Iota.Job.Services
             _broadcastInProgressRepository = broadcastInProgressRepository;
             _balanceRepository = balanceRepository;
             _balancePositiveRepository = balancePositiveRepository;
+            _addressInputRepository = addressInputRepository;
             _nodeClient = nodeClient;
             _iotaService = iotaService;
             _minConfirmations = minConfirmations;
@@ -48,16 +52,14 @@ namespace Lykke.Service.Iota.Job.Services
 
             foreach (var item in list)
             {
-                var included = await _nodeClient.TransactionIncluded(item.Hash);
-                if (included)
+                var bundleInfo = await _nodeClient.GetBundleInfo(item.Hash);
+                if (bundleInfo.Included)
                 {
-                    var txInfo = await _nodeClient.GetTransactionInfo(item.Hash);
-
                     _log.WriteInfo(nameof(UpdateBroadcasts),
-                        new { item.OperationId, amount = txInfo.Value, txInfo.Block},
+                        new { item.OperationId, amount = bundleInfo.TxValue, bundleInfo.TxBlock},
                         $"Brodcast update is detected");
 
-                    await _broadcastRepository.SaveAsCompletedAsync(item.OperationId, txInfo.Value, 0, txInfo.Block);
+                    await _broadcastRepository.SaveAsCompletedAsync(item.OperationId, bundleInfo.TxValue, 0, bundleInfo.TxBlock);
 
                     _chaosKitty.Meow(item.OperationId);
 
@@ -101,20 +103,25 @@ namespace Lykke.Service.Iota.Job.Services
 
             foreach (var item in list)
             {
-                var included = await _nodeClient.TransactionIncluded(item.Hash);
-                if (!included)
+                var info = await _nodeClient.GetBundleInfo(item.Hash);
+                if (!info.Included)
                 {
-                    _log.WriteInfo(nameof(UpdateBroadcasts), new { item.Hash }, $"Promote transaction");
-                    await _nodeClient.Promote(item.Hash, 5);
+                    _log.WriteInfo(nameof(PromoteBroadcasts), new { item.Hash }, $"Promote transaction");
 
-                    included = await _nodeClient.TransactionIncluded(item.Hash);
-                    if (!included)
+                    try
                     {
-                        _log.WriteInfo(nameof(UpdateBroadcasts), new { item.Hash }, $"Reattach transaction");
-                        var result = await _nodeClient.Reattach(item.Hash);
+                        await _nodeClient.Promote(info.TxHash, 10);
+                    }
+                    catch (Exception ex)
+                    {
+                        _log.WriteInfo(nameof(PromoteBroadcasts), new { item.Hash }, $"Failed to promote: {ex.ToString()}");
+                    }
 
-                        await _broadcastRepository.UpdateHashAsync(item.OperationId, result.Hash, result.Block);
-                        await _broadcastInProgressRepository.UpdateHashAsync(item.OperationId, result.Hash);
+                    info = await _nodeClient.GetBundleInfo(info.TxHash);
+                    if (!info.Included)
+                    {
+                        _log.WriteInfo(nameof(PromoteBroadcasts), new { item.Hash }, $"Reattach transaction");
+                        var result = await _nodeClient.Reattach(item.Hash);
                     }
                 }                
             }
@@ -167,6 +174,28 @@ namespace Lykke.Service.Iota.Job.Services
                 await _balancePositiveRepository.DeleteAsync(virtualAddress);
 
                 _chaosKitty.Meow(virtualAddress);
+            }
+
+            var inputs = await _addressInputRepository.GetAsync(virtualAddress);
+            foreach (var input in inputs)
+            {
+                var wasSpent = await _nodeClient.WereAddressesSpentFrom(input.Address);
+                if (wasSpent)
+                {
+                    var inputBalance = await _nodeClient.GetAddressBalance(input.Address, _minConfirmations);
+                    if (inputBalance > 0)
+                    {
+                        _log.WriteError(nameof(RefreshAddressBalance), input.ToJson(),
+                            new Exception("Positive balance is for the input with used private key"));
+                    }
+                    else
+                    {
+                        _log.WriteInfo(nameof(RefreshAddressBalance), input.ToJson(),
+                            $"Input with used private key is removed");
+
+                        await _addressInputRepository.DeleteAsync(input.AddressVirtual, input.Address);
+                    }
+                }
             }
 
             return balance;

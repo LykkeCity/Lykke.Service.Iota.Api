@@ -6,8 +6,9 @@ namespace Lykke.Service.Iota.Api.Core.Services
     {
         Task<long> GetAddressBalance(string address, int threshold);
         Task<bool> WereAddressesSpentFrom(string address);
-        Task<(long Value, long Block)> GetTransactionInfo(string hash);
         Task<bool> TransactionIncluded(string tailTxHash);
+        Task<(long Value, long Block)> GetTransactionInfo(string hash);
+        Task<(bool Included, string TxHash, long TxValue, long TxBlock)> GetBundleInfo(string hash);
         Task<string[]> GetBundleAddresses(string tailTxHash);
         Task<(string Hash, long Block)> Broadcast(string[] trytes);
         Task<(string Hash, long Block)> Reattach(string tailTxHash);
