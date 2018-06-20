@@ -108,7 +108,7 @@ namespace Lykke.Service.Iota.Job.Services
                 {
                     _log.WriteInfo(nameof(PromoteBroadcasts), new { info.TxHash }, $"Promote transaction");
 
-                    await _nodeClient.Promote(info.TxHash, info.TxAddress, 3);
+                    await _nodeClient.Promote(info.TxHash, new String('9', 81), 3);
                 }
             }
         }
@@ -148,7 +148,7 @@ namespace Lykke.Service.Iota.Job.Services
         //    }
         //}
 
-        private async Task<decimal> RefreshAddressBalance(string virtualAddress, bool deleteZeroBalance)
+        private async Task RefreshAddressBalance(string virtualAddress, bool deleteZeroBalance)
         {
             var balance = await _iotaService.GetVirtualAddressBalance(virtualAddress);
             if (balance > 0)
@@ -160,17 +160,23 @@ namespace Lykke.Service.Iota.Job.Services
                 {
                     _log.WriteInfo(nameof(RefreshAddressBalance), new { virtualAddress, balance, block },
                         $"Positive balance is detected");
+
+                    await RefreshInputs(virtualAddress);
                 }
                 if (balancePositive != null && balancePositive.Amount != balance)
                 {
                     _log.WriteInfo(nameof(RefreshAddressBalance),
                         new { virtualAddress, balance, oldBalance = balancePositive.Amount, block },
                         $"Change in positive balance is detected");
+
+                    await RefreshInputs(virtualAddress);
                 }
+
+                _chaosKitty.Meow(new { virtualAddress, balance, block }.ToJson());
 
                 await _balancePositiveRepository.SaveAsync(virtualAddress, balance, block);
 
-                _chaosKitty.Meow(new { virtualAddress, balance, block }.ToJson());
+                return;
             }
 
             if (balance == 0 && deleteZeroBalance)
@@ -178,17 +184,14 @@ namespace Lykke.Service.Iota.Job.Services
                 _log.WriteInfo(nameof(RefreshAddressBalance), new { virtualAddress },
                     $"Zero balance is detected");
 
-                await _balancePositiveRepository.DeleteAsync(virtualAddress);
+                await RefreshInputs(virtualAddress);
 
                 _chaosKitty.Meow(virtualAddress);
-            }
 
-            if (balance == 0)
-            {
-                await RefreshInputs(virtualAddress);
-            }
+                await _balancePositiveRepository.DeleteAsync(virtualAddress);
 
-            return balance;
+                return;
+            }
         }
 
         private async Task RefreshInputs(string virtualAddress)

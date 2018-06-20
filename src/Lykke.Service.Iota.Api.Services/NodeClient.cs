@@ -12,6 +12,7 @@ using Tangle.Net.Repository.DataTransfer;
 using Tangle.Net.Repository.Client;
 using Tangle.Net.Repository.Responses;
 using Common;
+using Lykke.Service.Iota.Api.Services.Helpers;
 
 namespace Lykke.Service.Iota.Api.Services
 {
@@ -34,7 +35,7 @@ namespace Lykke.Service.Iota.Api.Services
         {
             try
             {
-                var response = await _repository.GetBalancesAsync(new List<Address> { new Address(address) }, threshold);
+                var response = await Run(() => _repository.GetBalancesAsync(new List<Address> { new Address(address) }, threshold));
 
                 return response.Addresses[0].Balance;
             }
@@ -46,14 +47,14 @@ namespace Lykke.Service.Iota.Api.Services
 
         public async Task<bool> WereAddressesSpentFrom(string address)
         {
-            var response = await _repository.WereAddressesSpentFromAsync(new List<Address> { new Address(address) });
+            var response = await Run(() => _repository.WereAddressesSpentFromAsync(new List<Address> { new Address(address) }));
 
             return response.First().SpentFrom;
         }
 
         public async Task<string[]> GetBundleAddresses(string tailTxHash)
         {
-            var bundle = await _repository.GetBundleAsync(new Hash(tailTxHash));
+            var bundle = await Run(() => _repository.GetBundleAsync(new Hash(tailTxHash)));
 
             return bundle.Transactions
                 .Where(f => f.Value != 0)
@@ -66,7 +67,7 @@ namespace Lykke.Service.Iota.Api.Services
         {
             var hashObj = new Hash(hash);
 
-            var result = await _repository.GetLatestInclusionAsync(new List<Hash> { hashObj });
+            var result = await Run(() => _repository.GetLatestInclusionAsync(new List<Hash> { hashObj }));
             if (result != null)
             {
                 if (result.States.Keys.Contains(hashObj))
@@ -81,7 +82,7 @@ namespace Lykke.Service.Iota.Api.Services
         public async Task<(bool Included, string TxHash, string TxAddress, long TxValue, long TxBlock)> GetBundleInfo(string hash)
         {
             var tx = await GetTransaction(hash);
-            var txsHashes = await _repository.FindTransactionsByBundlesAsync(new List<Hash> { tx.BundleHash });
+            var txsHashes = await Run(() => _repository.FindTransactionsByBundlesAsync(new List<Hash> { tx.BundleHash }));
             var txs = await GetTransactions(txsHashes.Hashes);
             var txsTail = txs.Where(f => f.IsTail).OrderByDescending(f => f.AttachmentTimestamp);
             var txLatest = txsTail.First();
@@ -106,7 +107,7 @@ namespace Lykke.Service.Iota.Api.Services
 
         public async Task<ConsistencyInfo> CheckConsistency(string hash)
         {
-            return await _repository.CheckConsistencyAsync(new List<Hash> { new Hash(hash) });
+            return await Run(() => _repository.CheckConsistencyAsync(new List<Hash> { new Hash(hash) }));
         }
 
         public async Task<(string Hash, long Block)> Broadcast(string[] trytes)
@@ -115,7 +116,7 @@ namespace Lykke.Service.Iota.Api.Services
             var txs = trytes.Select(f => Transaction.FromTrytes(new TransactionTrytes(f)));
 
             _log.WriteInfo(nameof(Broadcast), "", "Send txs");
-            var txsTrities = await _repository.SendTrytesAsync(txs);
+            var txsTrities = await Run(() => _repository.SendTrytesAsync(txs));
 
             _log.WriteInfo(nameof(Broadcast), "", "Get broadcated txs");
             var txsBroadcasted = txsTrities.Select(f => Transaction.FromTrytes(f)).ToList();
@@ -130,7 +131,7 @@ namespace Lykke.Service.Iota.Api.Services
 
         public async Task<(string Hash, long Block)> Reattach(string tailTxHash)
         {
-            var txsTrities = await _repository.ReplayBundleAsync(new Hash(tailTxHash));
+            var txsTrities = await Run(() => _repository.ReplayBundleAsync(new Hash(tailTxHash)));
             var txsBroadcasted = txsTrities.Select(f => Transaction.FromTrytes(f)).ToList();
             var tailTx = txsBroadcasted.Where(f => f.IsTail).First();
 
@@ -160,17 +161,17 @@ namespace Lykke.Service.Iota.Api.Services
                     bundle.Finalize();
                     bundle.Sign();
 
-                    var result = await _client.ExecuteParameterizedCommandAsync<GetTransactionsToApproveResponse>(new Dictionary<string, object>
+                    var result = await Run(() => _client.ExecuteParameterizedCommandAsync<GetTransactionsToApproveResponse>(new Dictionary<string, object>
                     {
                         { "command", CommandType.GetTransactionsToApprove },
                         { "depth", depth },
                         { "reference", tailTxHash }
-                    });
+                    }));
 
-                    var attachResultTrytes = await _repository.AttachToTangleAsync(
+                    var attachResultTrytes = await Run(() => _repository.AttachToTangleAsync(
                         new Hash(result.BranchTransaction),
                         new Hash(result.TrunkTransaction),
-                        bundle.Transactions);
+                        bundle.Transactions));
 
                     await _repository.BroadcastAndStoreTransactionsAsync(attachResultTrytes);
                 }
@@ -183,16 +184,31 @@ namespace Lykke.Service.Iota.Api.Services
 
         private async Task<Transaction> GetTransaction(string hash)
         {
-            var txTrytes = await _repository.GetTrytesAsync(new List<Hash> { new Hash(hash) });
+            var txTrytes = await Run(() => _repository.GetTrytesAsync(new List<Hash> { new Hash(hash) }));
 
             return Transaction.FromTrytes(txTrytes.First());
         }
 
         private async Task<List<Transaction>> GetTransactions(List<Hash> hashes)
         {
-            var txTrytes = await _repository.GetTrytesAsync(hashes);
+            var txTrytes = await Run(() => _repository.GetTrytesAsync(hashes));
 
             return txTrytes.Select(f => Transaction.FromTrytes(f)).ToList();
+        }
+
+        private async Task<T> Run<T>(Func<Task<T>> action, int tryCount = 3)
+        {
+            bool NeedToRetryException(Exception ex)
+            {
+                if (ex is IotaApiException)
+                {
+                    return true;
+                }
+
+                return false;
+            }
+
+            return await Retry.Try(action, NeedToRetryException, tryCount, _log, 1000);
         }
     }
 }
