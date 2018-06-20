@@ -25,18 +25,23 @@ namespace Lykke.Service.Iota.Api.Services
         {
             var restClient = new RestClient(nodeUrl);
 
-            _log = log;
+            _log = log.CreateComponentScope(nameof(NodeClient));
             _repository = new RestIotaRepository(restClient, new PoWService(new CpuPearlDiver()));
             _client = new RestIotaClient(restClient);
         }
 
         public async Task<long> GetAddressBalance(string address, int threshold)
         {
-            var response = await _repository.GetBalancesAsync(
-                new List<Address> { new Address(address) }, 
-                threshold);
+            try
+            {
+                var response = await _repository.GetBalancesAsync(new List<Address> { new Address(address) }, threshold);
 
-            return response.Addresses[0].Balance;
+                return response.Addresses[0].Balance;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Failed to get balance for address={address} and threshold={threshold}", ex);
+            }
         }
 
         public async Task<bool> WereAddressesSpentFrom(string address)
@@ -73,7 +78,7 @@ namespace Lykke.Service.Iota.Api.Services
             return false;
         }
 
-        public async Task<(bool Included, string TxHash, long TxValue, long TxBlock)> GetBundleInfo(string hash)
+        public async Task<(bool Included, string TxHash, string TxAddress, long TxValue, long TxBlock)> GetBundleInfo(string hash)
         {
             var tx = await GetTransaction(hash);
             var txsHashes = await _repository.FindTransactionsByBundlesAsync(new List<Hash> { tx.BundleHash });
@@ -85,11 +90,11 @@ namespace Lykke.Service.Iota.Api.Services
             {
                 if (await TransactionIncluded(txTail.Hash.Value))
                 {
-                    return (true, txTail.Hash.Value, txTail.Value, txTail.AttachmentTimestamp);
+                    return (true, txTail.Hash.Value, txTail.Address.Value, txTail.Value, txTail.AttachmentTimestamp);
                 }
             }
 
-            return (false, txLatest.Hash.Value, txLatest.Value, txLatest.AttachmentTimestamp);
+            return (false, txLatest.Hash.Value, txLatest.Address.Value, txLatest.Value, txLatest.AttachmentTimestamp);
         }
 
         public async Task<(long Value, long Block)> GetTransactionInfo(string hash)
@@ -132,40 +137,47 @@ namespace Lykke.Service.Iota.Api.Services
             return (tailTx.Hash.Value, tailTx.Timestamp);
         }
 
-        public async Task Promote(string tailTxHash, int attempts = 10, int depth = 27)
+        public async Task Promote(string tailTxHash, string address, int attempts = 10, int depth = 27)
         {
             for (var i = 0; i < attempts; i++)
             {
-                if (await TransactionIncluded(tailTxHash))
+                try
                 {
-                    return;
+                    if (await TransactionIncluded(tailTxHash))
+                    {
+                        return;
+                    }
+
+                    var bundle = new Bundle();
+
+                    bundle.AddTransfer(new Transfer
+                    {
+                        Address = new Address(address),
+                        Tag = Tag.Empty,
+                        Message = new TryteString(""),
+                        ValueToTransfer = 0
+                    });
+                    bundle.Finalize();
+                    bundle.Sign();
+
+                    var result = await _client.ExecuteParameterizedCommandAsync<GetTransactionsToApproveResponse>(new Dictionary<string, object>
+                    {
+                        { "command", CommandType.GetTransactionsToApprove },
+                        { "depth", depth },
+                        { "reference", tailTxHash }
+                    });
+
+                    var attachResultTrytes = await _repository.AttachToTangleAsync(
+                        new Hash(result.BranchTransaction),
+                        new Hash(result.TrunkTransaction),
+                        bundle.Transactions);
+
+                    await _repository.BroadcastAndStoreTransactionsAsync(attachResultTrytes);
                 }
-
-                var bundle = new Bundle();
-
-                bundle.AddTransfer(new Transfer
+                catch (Exception ex)
                 {
-                    Address = new Address(new String('9', 81)),
-                    Tag = Tag.Empty,
-                    Message = new TryteString(""),
-                    ValueToTransfer = 0
-                });
-                bundle.Finalize();
-                bundle.Sign();
-
-                var result = await _client.ExecuteParameterizedCommandAsync<GetTransactionsToApproveResponse>(new Dictionary<string, object>
-                {
-                    { "command", CommandType.GetTransactionsToApprove },
-                    { "depth", depth },
-                    { "reference", tailTxHash }
-                });
-
-                var attachResultTrytes = await _repository.AttachToTangleAsync(
-                    new Hash(result.BranchTransaction),
-                    new Hash(result.TrunkTransaction),
-                    bundle.Transactions);
-
-                await _repository.BroadcastAndStoreTransactionsAsync(attachResultTrytes);
+                    _log.WriteInfo(nameof(Promote), new { tailTxHash, address }, $"Failed to promote: {ex.ToString()}");
+                }
             }
         }
 

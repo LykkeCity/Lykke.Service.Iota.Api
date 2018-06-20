@@ -106,24 +106,31 @@ namespace Lykke.Service.Iota.Job.Services
                 var info = await _nodeClient.GetBundleInfo(item.Hash);
                 if (!info.Included)
                 {
-                    _log.WriteInfo(nameof(PromoteBroadcasts), new { item.Hash }, $"Promote transaction");
+                    _log.WriteInfo(nameof(PromoteBroadcasts), new { info.TxHash }, $"Promote transaction");
 
-                    try
-                    {
-                        await _nodeClient.Promote(info.TxHash, 10);
-                    }
-                    catch (Exception ex)
-                    {
-                        _log.WriteInfo(nameof(PromoteBroadcasts), new { item.Hash }, $"Failed to promote: {ex.ToString()}");
-                    }
+                    await _nodeClient.Promote(info.TxHash, info.TxAddress, 3);
+                }
+            }
+        }
 
-                    info = await _nodeClient.GetBundleInfo(info.TxHash);
-                    if (!info.Included)
+        public async Task ReattachBroadcasts()
+        {
+            var list = await _broadcastInProgressRepository.GetAllAsync();
+
+            foreach (var item in list)
+            {
+                var info = await _nodeClient.GetBundleInfo(item.Hash);
+                if (!info.Included)
+                {
+                    var mins = (DateTime.UtcNow - DateTimeOffset.FromUnixTimeMilliseconds(info.TxBlock).UtcDateTime).TotalMinutes;
+
+                    if (!info.Included && mins > 3)
                     {
-                        _log.WriteInfo(nameof(PromoteBroadcasts), new { item.Hash }, $"Reattach transaction");
-                        var result = await _nodeClient.Reattach(item.Hash);
+                        _log.WriteInfo(nameof(ReattachBroadcasts), new { info.TxHash }, $"Reattach transaction");
+
+                        var result = await _nodeClient.Reattach(info.TxHash);
                     }
-                }                
+                }
             }
         }
 
@@ -176,29 +183,28 @@ namespace Lykke.Service.Iota.Job.Services
                 _chaosKitty.Meow(virtualAddress);
             }
 
+            if (balance == 0)
+            {
+                await RefreshInputs(virtualAddress);
+            }
+
+            return balance;
+        }
+
+        private async Task RefreshInputs(string virtualAddress)
+        {
             var inputs = await _addressInputRepository.GetAsync(virtualAddress);
             foreach (var input in inputs)
             {
                 var wasSpent = await _nodeClient.WereAddressesSpentFrom(input.Address);
                 if (wasSpent)
                 {
-                    var inputBalance = await _nodeClient.GetAddressBalance(input.Address, _minConfirmations);
-                    if (inputBalance > 0)
-                    {
-                        _log.WriteError(nameof(RefreshAddressBalance), input.ToJson(),
-                            new Exception("Positive balance is for the input with used private key"));
-                    }
-                    else
-                    {
-                        _log.WriteInfo(nameof(RefreshAddressBalance), input.ToJson(),
-                            $"Input with used private key is removed");
+                    _log.WriteInfo(nameof(RefreshAddressBalance), input.ToJson(),
+                        $"Input with used private key is removed");
 
-                        await _addressInputRepository.DeleteAsync(input.AddressVirtual, input.Address);
-                    }
+                    await _addressInputRepository.DeleteAsync(input.AddressVirtual, input.Address);
                 }
             }
-
-            return balance;
         }
     }
 }

@@ -7,5 +7,6 @@ namespace Lykke.Service.Iota.Job.Services
         Task UpdateBalances();
         Task UpdateBroadcasts();
         Task PromoteBroadcasts();
+        Task ReattachBroadcasts();
     }
 }

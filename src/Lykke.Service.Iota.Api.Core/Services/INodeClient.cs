@@ -8,10 +8,10 @@ namespace Lykke.Service.Iota.Api.Core.Services
         Task<bool> WereAddressesSpentFrom(string address);
         Task<bool> TransactionIncluded(string tailTxHash);
         Task<(long Value, long Block)> GetTransactionInfo(string hash);
-        Task<(bool Included, string TxHash, long TxValue, long TxBlock)> GetBundleInfo(string hash);
+        Task<(bool Included, string TxHash, string TxAddress, long TxValue, long TxBlock)> GetBundleInfo(string hash);
         Task<string[]> GetBundleAddresses(string tailTxHash);
         Task<(string Hash, long Block)> Broadcast(string[] trytes);
         Task<(string Hash, long Block)> Reattach(string tailTxHash);
-        Task Promote(string tailTxHash, int attempts = 10, int depth = 27);
+        Task Promote(string tailTxHash, string address, int attempts = 10, int depth = 27);
     }
 }

@@ -110,6 +110,12 @@ namespace Lykke.Service.Iota.Job.Modules
                 .AutoActivate()
                 .WithParameter("period", _settings.CurrentValue.PromotionHandlerInterval)
                 .SingleInstance();
+
+            builder.RegisterType<ReattachmentHandler>()
+                .As<IStartable>()
+                .AutoActivate()
+                .WithParameter("period", _settings.CurrentValue.ReattachmentHandlerInterval)
+                .SingleInstance();            
         }
     }
 }

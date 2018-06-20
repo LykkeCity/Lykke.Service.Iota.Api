@@ -68,9 +68,9 @@ namespace Lykke.Service.Iota.Api.Services
             return list.ToArray();
         }
 
-        public async Task<long> GetVirtualAddressBalance(string address)
+        public async Task<long> GetVirtualAddressBalance(string virtualAddress)
         {
-            var inputs = await GetVirtualAddressInputs(address);
+            var inputs = await GetVirtualAddressInputs(virtualAddress);
 
             return inputs.Sum(f => f.Balance);
         }

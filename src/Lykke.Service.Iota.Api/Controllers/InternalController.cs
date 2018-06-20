@@ -4,6 +4,7 @@ using Lykke.Service.Iota.Api.Core.Shared;
 using Lykke.Service.Iota.Api.Models;
 using Lykke.Service.Iota.Api.Services;
 using Microsoft.AspNetCore.Mvc;
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
@@ -86,7 +87,7 @@ namespace Lykke.Service.Iota.Api.Controllers
         [HttpGet("tx/{hash}/promote")]
         public async Task PromoteBundle([Required] string hash, [Required] int attemts)
         {
-            await _nodeClient.Promote(hash, attemts);
+            await _nodeClient.Promote(hash, new String('9', 81), attemts);
         }
 
         [HttpGet("tx/{hash}/included")]

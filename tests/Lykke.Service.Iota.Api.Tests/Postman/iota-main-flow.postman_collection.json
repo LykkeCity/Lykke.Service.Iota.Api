@@ -1,8 +1,7 @@
 {
 	"info": {
+		"_postman_id": "334442ed-a269-43aa-9de3-4f353daf40da",
 		"name": "Iota - Main Flow",
-		"_postman_id": "57709aa5-8528-876f-b470-7323ad861abe",
-		"description": "",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
@@ -76,7 +75,7 @@
 			"description": "",
 			"item": [
 				{
-					"name": "/api/balances/{address}/observation - delete address",
+					"name": "/api/balances/{address}/observation - delete DW address",
 					"event": [
 						{
 							"listen": "prerequest",
@@ -124,13 +123,12 @@
 								"{{dw-address}}",
 								"observation"
 							]
-						},
-						"description": ""
+						}
 					},
 					"response": []
 				},
 				{
-					"name": "/api/balances/{address}/observation - add address",
+					"name": "/api/balances/{address}/observation - add DW address",
 					"event": [
 						{
 							"listen": "prerequest",
@@ -178,8 +176,113 @@
 								"{{dw-address}}",
 								"observation"
 							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "/api/balances/{address}/observation - delete HW address",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"id": "d9dad08d-27dd-4345-a6d1-2d0f38d2c6a3",
+								"type": "text/javascript",
+								"exec": [
+									""
+								]
+							}
 						},
-						"description": ""
+						{
+							"listen": "test",
+							"script": {
+								"id": "53a7fc19-bc79-4531-8653-c5fbf200b4a8",
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 200 or 204\", function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200,204]);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "{{domain-api}}/api/balances/{{hw-address}}/observation",
+							"host": [
+								"{{domain-api}}"
+							],
+							"path": [
+								"api",
+								"balances",
+								"{{hw-address}}",
+								"observation"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "/api/balances/{address}/observation - add HW address",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"id": "d9dad08d-27dd-4345-a6d1-2d0f38d2c6a3",
+								"type": "text/javascript",
+								"exec": [
+									""
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"id": "5bee7399-cf86-41ed-87ff-3beef5956831",
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "{{domain-api}}/api/balances/{{hw-address}}/observation",
+							"host": [
+								"{{domain-api}}"
+							],
+							"path": [
+								"api",
+								"balances",
+								"{{hw-address}}",
+								"observation"
+							]
+						}
 					},
 					"response": []
 				}
@@ -222,7 +325,7 @@
 						{
 							"listen": "prerequest",
 							"script": {
-								"id": "726274dd-3247-4b48-b891-6d49f10eed04",
+								"id": "a667f322-526c-4370-94aa-f5439f1e693f",
 								"type": "text/javascript",
 								"exec": [
 									"console.info(\"Wait 70 secs\");",
@@ -255,12 +358,10 @@
 							"query": [
 								{
 									"key": "take",
-									"value": "500",
-									"equals": true
+									"value": "500"
 								}
 							]
-						},
-						"description": null
+						}
 					},
 					"response": []
 				},
@@ -270,7 +371,7 @@
 						{
 							"listen": "prerequest",
 							"script": {
-								"id": "9fd612a3-f3a2-461f-920e-f3666264d29f",
+								"id": "5834a382-d50a-42c9-8492-5a936265936c",
 								"type": "text/javascript",
 								"exec": [
 									"function S4() {",
@@ -285,10 +386,10 @@
 									"",
 									"console.info(\"operationId=\" + newGuid);",
 									"",
-									"var assetAccuracy = pm.environment.get(\"assetAccuracy\")",
+									"var dwBalance = pm.environment.get(\"dwBalance\")",
 									"",
 									"pm.environment.set(\"operationId\", newGuid);",
-									"pm.environment.set(\"amount\", 5 * Math.pow(10, assetAccuracy));"
+									"pm.environment.set(\"amount\", dwBalance);"
 								]
 							}
 						},
@@ -333,8 +434,7 @@
 								"transactions",
 								"single"
 							]
-						},
-						"description": ""
+						}
 					},
 					"response": []
 				},
@@ -397,8 +497,7 @@
 								"transactions",
 								"single"
 							]
-						},
-						"description": ""
+						}
 					},
 					"response": []
 				},
@@ -457,8 +556,7 @@
 								"api",
 								"sign"
 							]
-						},
-						"description": ""
+						}
 					},
 					"response": []
 				},
@@ -468,7 +566,7 @@
 						{
 							"listen": "prerequest",
 							"script": {
-								"id": "9dce0571-e646-46c1-9f6f-f80db944082a",
+								"id": "a883f8ba-96b5-4d7d-adc1-f72d514c0a14",
 								"type": "text/javascript",
 								"exec": [
 									""
@@ -498,7 +596,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"operationId\": \"{{operationId}}\",\r\n  \"signedTransaction\": \"{{signedTransaction}}\"\r\n}"
+							"raw": "{\r\n  \"operationId\": \"{{operationId}}\",\r\n  \"signedTransaction\": '{{signedTransaction}}'\r\n}"
 						},
 						"url": {
 							"raw": "{{domain-api}}/api/transactions/broadcast",
@@ -510,8 +608,7 @@
 								"transactions",
 								"broadcast"
 							]
-						},
-						"description": ""
+						}
 					},
 					"response": []
 				},
@@ -572,8 +669,7 @@
 								"single",
 								"{{operationId}}"
 							]
-						},
-						"description": null
+						}
 					},
 					"response": []
 				},
@@ -583,7 +679,7 @@
 						{
 							"listen": "test",
 							"script": {
-								"id": "f4c9c0a7-9f6d-401b-b5a5-4ba231e0e8f4",
+								"id": "9f16cf36-3525-44f4-aef6-7e0dbe9cbda3",
 								"type": "text/javascript",
 								"exec": [
 									"pm.test(\"Status code is 200\", function () {",
@@ -594,7 +690,7 @@
 									"    var jsonData = pm.response.json();",
 									"",
 									"    var dwAddress = pm.environment.get(\"dw-address\")",
-									"    var dwBalanceCurrent;",
+									"    var dwBalanceCurrent = 0;",
 									"    ",
 									"    for (var item of jsonData.items) { ",
 									"        if(item.address === dwAddress) {",
@@ -645,12 +741,10 @@
 							"query": [
 								{
 									"key": "take",
-									"value": "500",
-									"equals": true
+									"value": "500"
 								}
 							]
-						},
-						"description": null
+						}
 					},
 					"response": []
 				},
@@ -697,8 +791,7 @@
 								"broadcast",
 								"{{operationId}}"
 							]
-						},
-						"description": null
+						}
 					},
 					"response": []
 				}
@@ -709,31 +802,33 @@
 			"description": "",
 			"item": [
 				{
-					"name": "/api/balances - get DW balance",
+					"name": "/api/balances - get HW balance",
 					"event": [
 						{
 							"listen": "test",
 							"script": {
-								"id": "5cdf9774-906a-4ca2-a224-a19e6fe01b9d",
+								"id": "de3a5b02-07c3-46e3-8bd7-0dd560b754e8",
 								"type": "text/javascript",
 								"exec": [
 									"pm.test(\"Status code is 200\", function () {",
 									"    pm.response.to.have.status(200);",
 									"});",
 									"",
-									"var dwAddress = pm.environment.get(\"dw-address\")",
+									"var hwAddress = pm.environment.get(\"hw-address\")",
 									"",
 									"pm.test(\"Save HW balance\", function () {",
 									"    var jsonData = pm.response.json();",
+									"    var hwBalance = 0;",
 									"    ",
 									"    for (var item of jsonData.items) { ",
-									"        if(item.address === dwAddress) {",
-									"            console.info(\"Balance: \" + item.balance);",
-									"            console.info(\"Block: \" + item.block);",
-									"            ",
-									"            pm.environment.set(\"dwBalance\", item.balance);",
+									"        if(item.address === hwAddress) {",
+									"            hwBalance = item.balance;",
 									"        }",
 									"    }",
+									"    ",
+									"    console.info(\"hwBalance: \" + hwBalance);",
+									"",
+									"    pm.environment.set(\"hwBalance\", hwBalance);",
 									"});"
 								]
 							}
@@ -763,12 +858,10 @@
 							"query": [
 								{
 									"key": "take",
-									"value": "500",
-									"equals": true
+									"value": "500"
 								}
 							]
-						},
-						"description": null
+						}
 					},
 					"response": []
 				},
@@ -778,7 +871,7 @@
 						{
 							"listen": "prerequest",
 							"script": {
-								"id": "9fd612a3-f3a2-461f-920e-f3666264d29f",
+								"id": "935494e6-2e69-49aa-9644-7b96203ea05f",
 								"type": "text/javascript",
 								"exec": [
 									"function S4() {",
@@ -793,10 +886,10 @@
 									"",
 									"console.info(\"operationId=\" + newGuid);",
 									"",
-									"var assetAccuracy = pm.environment.get(\"assetAccuracy\")",
+									"var hwBalance = pm.environment.get(\"hwBalance\")",
 									"",
 									"pm.environment.set(\"operationId\", newGuid);",
-									"pm.environment.set(\"amount\", 5 * Math.pow(10, assetAccuracy));"
+									"pm.environment.set(\"amount\", hwBalance);"
 								]
 							}
 						},
@@ -841,8 +934,7 @@
 								"transactions",
 								"single"
 							]
-						},
-						"description": ""
+						}
 					},
 					"response": []
 				},
@@ -901,8 +993,7 @@
 								"api",
 								"sign"
 							]
-						},
-						"description": ""
+						}
 					},
 					"response": []
 				},
@@ -942,7 +1033,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"operationId\": \"{{operationId}}\",\r\n  \"signedTransaction\": \"{{signedTransaction}}\"\r\n}"
+							"raw": "{\r\n  \"operationId\": \"{{operationId}}\",\r\n  \"signedTransaction\": '{{signedTransaction}}'\r\n}"
 						},
 						"url": {
 							"raw": "{{domain-api}}/api/transactions/broadcast",
@@ -954,8 +1045,7 @@
 								"transactions",
 								"broadcast"
 							]
-						},
-						"description": ""
+						}
 					},
 					"response": []
 				},
@@ -1025,8 +1115,7 @@
 								"single",
 								"{{operationId}}"
 							]
-						},
-						"description": null
+						}
 					},
 					"response": []
 				},
@@ -1036,7 +1125,7 @@
 						{
 							"listen": "test",
 							"script": {
-								"id": "ceef8a04-fdc1-4c80-a45b-11b7d2b8c0d1",
+								"id": "03452efd-194f-4f1f-afbd-7e9b645c4a99",
 								"type": "text/javascript",
 								"exec": [
 									"pm.test(\"Status code is 200\", function () {",
@@ -1046,28 +1135,25 @@
 									"pm.test(\"Check DW balance\", function() {",
 									"    var jsonData = pm.response.json();",
 									"",
-									"    var dwAddress = pm.environment.get(\"dw-address\")",
-									"    var dwBalanceCurrent;",
-									"    var dwBlockCurrent;",
-									"    ",
+									"    var hwAddress = pm.environment.get(\"hw-address\")",
+									"    var hwBalanceCurrent = 0;",
+									"",
 									"    for (var item of jsonData.items) { ",
-									"        if(item.address === dwAddress) {",
-									"            dwBalanceCurrent = Number(item.balance);",
-									"            dwBlockCurrent = item.block;",
+									"        if(item.address === hwAddress) {",
+									"            hwBalanceCurrent = Number(item.balance);",
 									"        }",
 									"    }",
 									"    ",
-									"    var dwBalanceBefore = pm.environment.get(\"dwBalance\");",
+									"    var hwBalanceBefore = pm.environment.get(\"hwBalance\");",
 									"    var amount = pm.environment.get(\"amount\");",
-									"    var dwBalanceExpected = Number(dwBalanceBefore) + Number(amount);",
+									"    var hwBalanceExpected = Number(hwBalanceBefore) - Number(amount);",
 									"    ",
 									"    console.info(\"amount: \" + amount);",
-									"    console.info(\"dwBalanceBefore: \" + dwBalanceBefore);    ",
-									"    console.info(\"dwBalanceCurrent: \" + dwBalanceCurrent);",
-									"    console.info(\"dwBalanceExpected: \" + dwBalanceExpected);",
-									"    console.info(\"dwBlockCurrent: \" + dwBlockCurrent);",
+									"    console.info(\"dwBalanceBefore: \" + hwBalanceBefore);    ",
+									"    console.info(\"dwBalanceCurrent: \" + hwBalanceCurrent);",
+									"    console.info(\"dwBalanceExpected: \" + hwBalanceExpected);",
 									"",
-									"    pm.expect(dwBalanceExpected).to.eql(dwBalanceCurrent);",
+									"    pm.expect(hwBalanceExpected).to.eql(hwBalanceCurrent);",
 									"});"
 								]
 							}
@@ -1101,12 +1187,10 @@
 							"query": [
 								{
 									"key": "take",
-									"value": "500",
-									"equals": true
+									"value": "500"
 								}
 							]
-						},
-						"description": null
+						}
 					},
 					"response": []
 				},
@@ -1153,12 +1237,33 @@
 								"broadcast",
 								"{{operationId}}"
 							]
-						},
-						"description": null
+						}
 					},
 					"response": []
 				}
 			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"id": "4651c875-ac4f-4574-ae42-bf567a80984a",
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"id": "a585c4a6-7447-4664-b68f-d4e567e7476d",
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
 		}
 	]
 }
