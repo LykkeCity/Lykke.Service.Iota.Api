@@ -20,7 +20,6 @@ using Lykke.Service.Iota.Api.Modules;
 using Lykke.Service.BlockchainApi.Contract;
 using Lykke.Service.Iota.Api.Settings;
 
-
 namespace Lykke.Service.Iota.Api
 {
     public class Startup

@@ -2,7 +2,6 @@
 using Lykke.Service.Iota.Api.Core.Services;
 using Lykke.Service.Iota.Api.Core.Shared;
 using Lykke.Service.Iota.Api.Models;
-using Lykke.Service.Iota.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.ComponentModel.DataAnnotations;

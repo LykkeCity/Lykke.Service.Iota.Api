@@ -16,7 +16,6 @@ using Lykke.Service.Iota.Api.Core.Repositories;
 using Lykke.Service.Iota.Api.Helpers;
 using Lykke.Service.Iota.Api.Core.Shared;
 using Lykke.Service.Iota.Api.Core.Services;
-using Lykke.Service.Iota.Api.Services;
 
 namespace Lykke.Service.Iota.Api.Controllers
 {
