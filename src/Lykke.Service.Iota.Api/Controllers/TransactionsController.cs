@@ -85,13 +85,6 @@ namespace Lykke.Service.Iota.Api.Controllers
                 return BadRequest(BlockchainErrorResponse.FromKnownError(BlockchainErrorCode.NotEnoughtBalance));
             }
 
-            var txType = request.ToAddress.StartsWith(Consts.VirtualAddressPrefix) ? Consts.TxCashin : Consts.TxCashout;
-            if (txType == Consts.TxCashin && amount != fromAddressBalance)
-            {
-                return BadRequest(ErrorResponse.Create($"{nameof(amount)} ({amount}) must equal " +
-                    $"{nameof(fromAddressBalance)} ({fromAddressBalance}) for the {txType} operation"));
-            }
-
             var build = await _buildRepository.GetAsync(request.OperationId);
             if (build != null)
             {
@@ -104,7 +97,7 @@ namespace Lykke.Service.Iota.Api.Controllers
             await _log.WriteInfoAsync(nameof(TransactionsController), nameof(Build),
                 request.ToJson(), "Build transaction");
 
-            var transactionContext = GetTxContext(request, amount, txType);
+            var transactionContext = GetTxContext(request, amount);
 
             await _buildRepository.AddAsync(request.OperationId, transactionContext);
 
@@ -114,11 +107,11 @@ namespace Lykke.Service.Iota.Api.Controllers
             });
         }
 
-        private static string GetTxContext(BuildSingleTransactionRequest request, long amount, string txType)
+        private static string GetTxContext(BuildSingleTransactionRequest request, long amount)
         {
             return new
             {
-                Type = txType,
+                Type = request.ToAddress.StartsWith(Consts.VirtualAddressPrefix) ? Consts.TxCashin : Consts.TxCashout,
                 Inputs = new object[]
                 {
                     new
