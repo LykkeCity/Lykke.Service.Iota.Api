@@ -109,19 +109,22 @@ namespace Lykke.Service.Iota.Api.Controllers
 
         private static string GetTxContext(BuildSingleTransactionRequest request, long amount)
         {
-            return new
+            var type = request.ToAddress.StartsWith(Consts.VirtualAddressPrefix) ?
+                Core.Shared.TransactionType.Cashin : Core.Shared.TransactionType.Cashout;
+
+            return new TransactionContext
             {
-                Type = request.ToAddress.StartsWith(Consts.VirtualAddressPrefix) ? Consts.TxCashin : Consts.TxCashout,
-                Inputs = new object[]
+                Type = type,
+                Inputs = new TransactionInput[]
                 {
-                    new
+                    new TransactionInput
                     {
                         VirtualAddress = request.FromAddress
                     }
                 },
-                Outputs = new object[]
+                Outputs = new TransactionOutput[]
                 {
-                    new
+                    new TransactionOutput
                     {
                         Address = request.ToAddress,
                         Value = amount
