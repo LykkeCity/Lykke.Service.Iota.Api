@@ -289,7 +289,518 @@
 			]
 		},
 		{
-			"name": "Send from DW to HW",
+			"name": "Send from DW to HW (20 IOTA)",
+			"description": "",
+			"item": [
+				{
+					"name": "/api/balances - get DW balance",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "60a60c3a-0a52-4c0c-ae5a-026c05380f12",
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"var dwAddress = pm.environment.get(\"dw-address\")",
+									"",
+									"pm.test(\"Save DW balance\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    ",
+									"    for (var item of jsonData.items) { ",
+									"        if(item.address === dwAddress) {",
+									"            console.info(\"Balance: \" + item.balance);",
+									"            console.info(\"Block: \" + item.block);",
+									"            ",
+									"            pm.environment.set(\"dwBalance\", item.balance);",
+									"        }",
+									"    }",
+									"});"
+								]
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"id": "a667f322-526c-4370-94aa-f5439f1e693f",
+								"type": "text/javascript",
+								"exec": [
+									"console.info(\"Wait 70 secs\");",
+									"setTimeout(function(){}, 70000);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"email\": \"andrey.krivoshapov@lykke.com\"\r\n}"
+						},
+						"url": {
+							"raw": "{{domain-api}}/api/balances?take=500",
+							"host": [
+								"{{domain-api}}"
+							],
+							"path": [
+								"api",
+								"balances"
+							],
+							"query": [
+								{
+									"key": "take",
+									"value": "500"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "/api/transactions/single - build transaction",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"id": "f917eb87-3fcf-421a-a317-d037b15dea4f",
+								"type": "text/javascript",
+								"exec": [
+									"function S4() {",
+									"    return (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1);",
+									"}",
+									"",
+									"function guid() {",
+									"    return (S4() + S4() + \"-\" + S4() + \"-\" + S4() + \"-\" + S4() + \"-\" + S4() + S4() + S4());",
+									"}",
+									"",
+									"var newGuid = guid();",
+									"",
+									"console.info(\"operationId=\" + newGuid);",
+									"",
+									"var dwBalance = pm.environment.get(\"dwBalance\")",
+									"",
+									"pm.environment.set(\"operationId\", newGuid);",
+									"pm.environment.set(\"amount-1st-dw-hw\", 20);"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"id": "2b7c837c-c126-47c6-9529-3feb153c85ee",
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Save transactionContext\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    ",
+									"    pm.environment.set(\"transactionContext\", jsonData.transactionContext);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"operationId\": \"{{operationId}}\",\r\n  \"fromAddress\": \"{{dw-address}}\",\r\n  \"toAddress\": \"{{hw-address}}\",\r\n  \"assetId\": \"{{asset-id}}\",\r\n  \"amount\": {{amount-1st-dw-hw}},\r\n  \"includeFee\": true\r\n}"
+						},
+						"url": {
+							"raw": "{{domain-api}}/api/transactions/single",
+							"host": [
+								"{{domain-api}}"
+							],
+							"path": [
+								"api",
+								"transactions",
+								"single"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "/api/transactions/single - build transaction again",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"id": "b0a8c2b0-8534-4a89-a404-92494192378f",
+								"type": "text/javascript",
+								"exec": [
+									""
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"id": "e952d7d3-1d98-42c5-abef-16f075adb72a",
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Check transactionContext\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    var expected = pm.environment.get(\"transactionContext\");",
+									"    var current = jsonData.transactionContext;",
+									"    ",
+									"    console.info(\"expected: \" + expected);",
+									"    console.info(\"current: \" + current);",
+									"    ",
+									"    pm.expect(expected).to.eql(current);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"operationId\": \"{{operationId}}\",\r\n  \"fromAddress\": \"{{dw-address}}\",\r\n  \"toAddress\": \"{{hw-address}}\",\r\n  \"assetId\": \"{{asset-id}}\",\r\n  \"amount\": {{amount-1st-dw-hw}},\r\n  \"includeFee\": false\r\n}"
+						},
+						"url": {
+							"raw": "{{domain-api}}/api/transactions/single",
+							"host": [
+								"{{domain-api}}"
+							],
+							"path": [
+								"api",
+								"transactions",
+								"single"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "/api/sign - sign transaction",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"id": "c1584453-a043-4123-89d3-3c97c60fe90f",
+								"type": "text/javascript",
+								"exec": [
+									"",
+									"",
+									""
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"id": "de09d592-7c10-4ae0-a142-002dbc75e203",
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Save signedTransaction\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    ",
+									"    console.info(\"signedTransaction: \" + jsonData.signedTransaction);",
+									"    ",
+									"    pm.environment.set(\"signedTransaction\", jsonData.signedTransaction);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"privateKeys\": [\r\n    \"{{dw-private-key}}\"\r\n  ],\r\n  \"transactionContext\": '{{transactionContext}}'\r\n}"
+						},
+						"url": {
+							"raw": "{{domain-sign}}/api/sign",
+							"host": [
+								"{{domain-sign}}"
+							],
+							"path": [
+								"api",
+								"sign"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "/api/transactions/broadcast - broadcast transaction",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"id": "a883f8ba-96b5-4d7d-adc1-f72d514c0a14",
+								"type": "text/javascript",
+								"exec": [
+									""
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"id": "eaee924c-f664-4390-8602-2eb7b60cc89e",
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"operationId\": \"{{operationId}}\",\r\n  \"signedTransaction\": '{{signedTransaction}}'\r\n}"
+						},
+						"url": {
+							"raw": "{{domain-api}}/api/transactions/broadcast",
+							"host": [
+								"{{domain-api}}"
+							],
+							"path": [
+								"api",
+								"transactions",
+								"broadcast"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "/api/transactions/broadcast/single/{operationId} - wait transaction completion",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "ae29a9c0-952e-4346-8603-d35650510994",
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"var jsonData = JSON.parse(responseBody);",
+									"var current = jsonData.state;",
+									"var expected = \"completed\";",
+									"",
+									"if(current == expected){",
+									"    console.info(\"Transaction completed in block=\" + jsonData.block);",
+									"} else {",
+									"    console.info(\"current state:\" + current);",
+									"    console.info(\"Wait 60 secs\");",
+									"    setTimeout(function(){}, 60000);",
+									"    postman.setNextRequest(\"/api/transactions/broadcast/single/{operationId} - wait transaction completion\");",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "adminAuthToken",
+								"value": "{{admin_auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"email\": \"andrey.krivoshapov@lykke.com\"\r\n}"
+						},
+						"url": {
+							"raw": "{{domain-api}}/api/transactions/broadcast/single/{{operationId}}",
+							"host": [
+								"{{domain-api}}"
+							],
+							"path": [
+								"api",
+								"transactions",
+								"broadcast",
+								"single",
+								"{{operationId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "/api/balances - check DW balance",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "0df8b593-c481-4b2e-8819-44c8832091c1",
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Check DW balance\", function() {",
+									"    var jsonData = pm.response.json();",
+									"",
+									"    var dwAddress = pm.environment.get(\"dw-address\")",
+									"    var dwBalanceCurrent = 0;",
+									"    ",
+									"    for (var item of jsonData.items) { ",
+									"        if(item.address === dwAddress) {",
+									"            dwBalanceCurrent = Number(item.balance);",
+									"        }",
+									"    }",
+									"    ",
+									"    var dwBalanceBefore = pm.environment.get(\"dwBalance\");",
+									"    var amount1stDwHw = pm.environment.get(\"amount-1st-dw-hw\");",
+									"    var dwBalanceExpected = Number(dwBalanceBefore) - Number(amount1stDwHw);",
+									"    ",
+									"    console.info(\"amount1stDwHw: \" + amount1stDwHw);",
+									"    console.info(\"dwBalanceBefore: \" + dwBalanceBefore);    ",
+									"    console.info(\"dwBalanceCurrent: \" + dwBalanceCurrent);",
+									"    console.info(\"dwBalanceExpected: \" + dwBalanceExpected);",
+									"",
+									"    pm.expect(dwBalanceExpected).to.eql(dwBalanceCurrent);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "adminAuthToken",
+								"value": "{{admin_auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"email\": \"andrey.krivoshapov@lykke.com\"\r\n}"
+						},
+						"url": {
+							"raw": "{{domain-api}}/api/balances?take=500",
+							"host": [
+								"{{domain-api}}"
+							],
+							"path": [
+								"api",
+								"balances"
+							],
+							"query": [
+								{
+									"key": "take",
+									"value": "500"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "/api/transactions/broadcast/{operationId} - delete operation",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"id": "415ed145-c923-4424-8fcd-e5e6971a0f2c",
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "adminAuthToken",
+								"value": "{{admin_auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "{{domain-api}}/api/transactions/broadcast/{{operationId}}",
+							"host": [
+								"{{domain-api}}"
+							],
+							"path": [
+								"api",
+								"transactions",
+								"broadcast",
+								"{{operationId}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Send from DW to HW (Rest amount)",
 			"description": "",
 			"item": [
 				{
@@ -615,12 +1126,12 @@
 					"response": []
 				},
 				{
-					"name": "/api/transactions/broadcast/single/{operationId} - wait transaction completion",
+					"name": "/api/transactions/broadcast/single/{operationId} - wait transaction completion (rest)",
 					"event": [
 						{
 							"listen": "test",
 							"script": {
-								"id": "1250e3f7-fe49-46c5-8114-81ffd6d7313d",
+								"id": "c9d3a084-036c-4775-8ae9-f79b3bd52b2d",
 								"type": "text/javascript",
 								"exec": [
 									"pm.test(\"Status code is 200\", function () {",
@@ -632,12 +1143,12 @@
 									"var expected = \"completed\";",
 									"",
 									"if(current == expected){",
-									"    console.info(\"Transaction completed with fee=\" + jsonData.fee + \" in block=\" + jsonData.block);",
+									"    console.info(\"Transaction completed in block=\" + jsonData.block);",
 									"} else {",
 									"    console.info(\"current state:\" + current);",
 									"    console.info(\"Wait 60 secs\");",
 									"    setTimeout(function(){}, 60000);",
-									"    postman.setNextRequest(\"/api/transactions/broadcast/single/{operationId} - wait transaction completion\");",
+									"    postman.setNextRequest(\"/api/transactions/broadcast/single/{operationId} - wait transaction completion (rest)\");",
 									"}"
 								]
 							}
@@ -796,6 +1307,28 @@
 						}
 					},
 					"response": []
+				}
+			],
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"id": "6425ceb1-95fa-48ad-b897-f08056618e95",
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"id": "f6e8992b-5c66-4d20-a122-481c7de84576",
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
 				}
 			]
 		},

@@ -86,7 +86,7 @@ namespace Lykke.Service.Iota.Api.Controllers
         [HttpGet("tx/{hash}/promote")]
         public async Task PromoteBundle([Required] string hash, [Required] int attemts)
         {
-            await _nodeClient.Promote(hash, new String('9', 81), attemts);
+            await _nodeClient.Promote(hash, attemts);
         }
 
         [HttpGet("tx/{hash}/included")]

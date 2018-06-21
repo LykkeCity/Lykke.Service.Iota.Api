@@ -111,9 +111,7 @@ namespace Lykke.Service.Iota.Job.Services
                 var info = await _nodeClient.GetBundleInfo(item.Hash);
                 if (!info.Included)
                 {
-                    _log.WriteInfo(nameof(PromoteBroadcasts), new { info.TxHash }, $"Promote transaction");
-
-                    await _nodeClient.Promote(info.TxHash, new String('9', 81), 3);
+                    await _nodeClient.Promote(info.TxHash, 3, 5);
                 }
             }
         }
@@ -155,6 +153,11 @@ namespace Lykke.Service.Iota.Job.Services
             virtualAddresses.AddRange(transactionContext.Outputs
                 .Where(f => f.Address.StartsWith(Consts.VirtualAddressPrefix))
                 .Select(f => f.Address));
+
+            virtualAddresses = virtualAddresses.Distinct().ToList();
+
+            _log.WriteInfo(nameof(RefreshOperationBalances), new { virtualAddresses },
+                $"Refresh virtual addresses from brodcast");
 
             foreach (var virtualAddress in virtualAddresses)
             {
@@ -220,7 +223,8 @@ namespace Lykke.Service.Iota.Job.Services
                 var wasSpent = await _nodeClient.WereAddressesSpentFrom(input.Address);
                 if (wasSpent)
                 {
-                    _log.WriteInfo(nameof(RefreshAddressBalance), input.ToJson(),
+                    _log.WriteInfo(nameof(RefreshInputs),
+                        new { input.AddressVirtual, input.Address, input.Index },
                         $"Input with used private key is removed");
 
                     await _addressInputRepository.DeleteAsync(input.AddressVirtual, input.Address);

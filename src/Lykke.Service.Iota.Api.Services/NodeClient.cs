@@ -138,8 +138,11 @@ namespace Lykke.Service.Iota.Api.Services
             return (tailTx.Hash.Value, tailTx.Timestamp);
         }
 
-        public async Task Promote(string tailTxHash, string address, int attempts = 10, int depth = 27)
+        public async Task Promote(string tailTxHash, int attempts = 10, int depth = 27)
         {
+            var successAttempts = 0;
+            var lastError = "";
+
             for (var i = 0; i < attempts; i++)
             {
                 try
@@ -153,7 +156,7 @@ namespace Lykke.Service.Iota.Api.Services
 
                     bundle.AddTransfer(new Transfer
                     {
-                        Address = new Address(address),
+                        Address = new Address(new String('9', 81)),
                         Tag = Tag.Empty,
                         Message = new TryteString(""),
                         ValueToTransfer = 0
@@ -174,12 +177,16 @@ namespace Lykke.Service.Iota.Api.Services
                         bundle.Transactions));
 
                     await _repository.BroadcastAndStoreTransactionsAsync(attachResultTrytes);
+
+                    successAttempts++;
                 }
                 catch (Exception ex)
                 {
-                    _log.WriteInfo(nameof(Promote), new { tailTxHash, address }, $"Failed to promote: {ex.ToString()}");
+                    lastError = ex.Message;
                 }
             }
+
+            _log.WriteInfo(nameof(Promote), new { tailTxHash, successAttempts, lastError }, "Promotion results");
         }
 
         private async Task<Transaction> GetTransaction(string hash)
