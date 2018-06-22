@@ -76,13 +76,35 @@ namespace Lykke.Service.Iota.Api.Controllers
             var addressInputs = await _addressInputRepository.GetAsync(request.FromAddress);
             if (!addressInputs.Any())
             {
-                return BadRequest(ErrorResponse.Create($"{nameof(request.FromAddress)} was not found"));
+                return BadRequest(ErrorResponse.Create($"Inputs for {nameof(request.FromAddress)} were not found"));
+            }
+
+            foreach (var addressInput in addressInputs)
+            {
+                var hasPendingTx = await _nodeClient.HasPendingTransaction(addressInput.Address);
+                if (hasPendingTx)
+                {
+                    return BadRequest(ErrorResponse.Create($"{addressInput.Address} has pending transaction"));
+                }
             }
 
             var fromAddressBalance = await _iotaService.GetVirtualAddressBalance(request.FromAddress);
             if (amount > fromAddressBalance)
             {
                 return BadRequest(BlockchainErrorResponse.FromKnownError(BlockchainErrorCode.NotEnoughtBalance));
+            }
+
+            var txType = request.ToAddress.StartsWith(Consts.VirtualAddressPrefix) ?
+                Core.Shared.TransactionType.Cashin : Core.Shared.TransactionType.Cashout;
+            var toAddress = request.ToAddress;
+            if (txType == Core.Shared.TransactionType.Cashin)
+            {
+                var toRealAddress = await _iotaService.GetRealAddress(toAddress);
+                var hasPendingTx = await _nodeClient.HasPendingTransaction(toRealAddress);
+                if (hasPendingTx)
+                {
+                    return BadRequest(ErrorResponse.Create($"The output {toRealAddress} address has pending transaction"));
+                }
             }
 
             var build = await _buildRepository.GetAsync(request.OperationId);
@@ -97,7 +119,7 @@ namespace Lykke.Service.Iota.Api.Controllers
             await _log.WriteInfoAsync(nameof(TransactionsController), nameof(Build),
                 request.ToJson(), "Build transaction");
 
-            var transactionContext = GetTxContext(request, amount);
+            var transactionContext = GetTxContext(request, amount, txType);
 
             await _buildRepository.AddAsync(request.OperationId, transactionContext);
 
@@ -107,11 +129,9 @@ namespace Lykke.Service.Iota.Api.Controllers
             });
         }
 
-        private static string GetTxContext(BuildSingleTransactionRequest request, long amount)
+        private static string GetTxContext(BuildSingleTransactionRequest request, long amount,
+            Core.Shared.TransactionType type)
         {
-            var type = request.ToAddress.StartsWith(Consts.VirtualAddressPrefix) ?
-                Core.Shared.TransactionType.Cashin : Core.Shared.TransactionType.Cashout;
-
             return new TransactionContext
             {
                 Type = type,

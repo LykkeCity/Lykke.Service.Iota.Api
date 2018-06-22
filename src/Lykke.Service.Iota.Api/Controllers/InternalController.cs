@@ -48,33 +48,33 @@ namespace Lykke.Service.Iota.Api.Controllers
         [HttpGet("virtual-address/{address}/real")]
         public async Task<IActionResult> GetVirtualAddressRealAddress([Required] string address)
         {
-            var addressInputs = await _addressInputRepository.GetAsync(address);
-            if (addressInputs == null || addressInputs.Count() == 0)
+            var realAddress = await _iotaService.GetRealAddress(address);
+            if (string.IsNullOrEmpty(realAddress))
             {
                 return NotFound();
             }
 
-            var latestIndex = addressInputs.Max(f => f.Index);
-            var latestAddress = addressInputs.First(f => f.Index == latestIndex);
-
-            return Ok(latestAddress.Address);
+            return Ok(realAddress);
         }
 
-        /// <summary>
-        /// Returns available inputs for the provided virtual Iota address
-        /// </summary>
         [HttpGet("virtual-address/{address}/inputs")]
-        public async Task<AddressInput[]> GetVirtualAddressIndex([Required] string address)
+        public async Task<AddressInput[]> GetVirtualAddressInputs([Required] string address)
         {
             return await _iotaService.GetVirtualAddressInputs(address);
         }
 
         [HttpGet("address/{hash}/can-recieve")]
-        public async Task<bool> PromoteBundle([Required] string hash)
+        public async Task<bool> HasCashOut([Required] string hash)
         {
             var result = await _nodeClient.WereAddressesSpentFrom(hash);
 
             return !result;
+        }
+
+        [HttpGet("address/{hash}/has-pending-tx")]
+        public async Task<bool> HasPendingTx([Required] string hash)
+        {
+            return await _nodeClient.HasPendingTransaction(hash);
         }
 
         [HttpGet("bundle/{hash}/reattach")]
@@ -93,6 +93,12 @@ namespace Lykke.Service.Iota.Api.Controllers
         public async Task<bool> BundleIncluded([Required] string hash)
         {
             return await _nodeClient.TransactionIncluded(hash);
+        }
+
+        [HttpGet("node/info")]
+        public async Task<string> GetNodeInfo()
+        {
+            return await _nodeClient.GetNodeInfo();
         }
     }
 }

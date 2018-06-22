@@ -31,6 +31,30 @@ namespace Lykke.Service.Iota.Api.Services
             _client = new RestIotaClient(restClient);
         }
 
+        public async Task<string> GetNodeInfo()
+        {
+            var response = await Run(() => _repository.GetNodeInfoAsync());
+
+            return response.ToJson();
+        }
+
+        public async Task<bool> HasPendingTransaction(string address)
+        {
+            var txsHashes = await Run(() => _repository.FindTransactionsByAddressesAsync(new List<Address> { new Address(address) }));
+            var txs = await GetTransactions(txsHashes.Hashes);
+            var txsNonZero = txs.Where(f => f.Value != 0).OrderByDescending(f => f.AttachmentTimestamp);
+
+            foreach (var txNonZero in txsNonZero)
+            {
+                if (!await TransactionIncluded(txNonZero.Hash.Value))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public async Task<long> GetAddressBalance(string address, int threshold)
         {
             try
@@ -186,7 +210,7 @@ namespace Lykke.Service.Iota.Api.Services
                 }
             }
 
-            _log.WriteInfo(nameof(Promote), new { tailTxHash, successAttempts, lastError }, "Promotion results");
+            _log.WriteInfo(nameof(Promote), new { successAttempts, tailTxHash, lastError }, "Promotion results");
         }
 
         private async Task<Transaction> GetTransaction(string hash)

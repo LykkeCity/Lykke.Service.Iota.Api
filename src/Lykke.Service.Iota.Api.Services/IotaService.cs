@@ -1,5 +1,4 @@
 ﻿using Common.Log;
-using Lykke.Service.Iota.Api.Core.Domain;
 using Lykke.Service.Iota.Api.Core.Repositories;
 using Lykke.Service.Iota.Api.Core.Services;
 using Lykke.Service.Iota.Api.Core.Shared;
@@ -48,6 +47,20 @@ namespace Lykke.Service.Iota.Api.Services
             catch { }
 
             return false;
+        }
+
+        public async Task<string> GetRealAddress(string virtualAddress)
+        {
+            var addressInputs = await _addressInputRepository.GetAsync(virtualAddress);
+            if (addressInputs == null || addressInputs.Count() == 0)
+            {
+                return null;
+            }
+
+            var latestIndex = addressInputs.Max(f => f.Index);
+            var latestAddress = addressInputs.First(f => f.Index == latestIndex);
+
+            return latestAddress.Address;
         }
 
         public async Task<AddressInput[]> GetVirtualAddressInputs(string virtualAddress)
