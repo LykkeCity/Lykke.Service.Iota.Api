@@ -84,6 +84,8 @@ namespace Lykke.Service.Iota.Api.Controllers
                 var hasPendingTx = await _nodeClient.HasPendingTransaction(addressInput.Address);
                 if (hasPendingTx)
                 {
+                    _log.WriteInfo(nameof(Build), new { addressInput.Address }, "Input address has pending transaction");
+
                     return BadRequest(ErrorResponse.Create($"{addressInput.Address} has pending transaction"));
                 }
             }
@@ -103,6 +105,8 @@ namespace Lykke.Service.Iota.Api.Controllers
                 var hasPendingTx = await _nodeClient.HasPendingTransaction(toRealAddress);
                 if (hasPendingTx)
                 {
+                    _log.WriteInfo(nameof(Build), new { address = toRealAddress }, "Output address has pending transaction");
+
                     return BadRequest(ErrorResponse.Create($"The output {toRealAddress} address has pending transaction"));
                 }
             }
