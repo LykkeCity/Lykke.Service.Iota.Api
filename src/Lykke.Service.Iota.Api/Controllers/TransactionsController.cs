@@ -187,6 +187,18 @@ namespace Lykke.Service.Iota.Api.Controllers
 
             _log.WriteInfo(nameof(Broadcast), request.ToJson(), "Broadcast transaction");
 
+            var txAddresses = _nodeClient.GetTransactionNonZeroAddresses(context.Transactions);
+            foreach (var txAddress in txAddresses)
+            {
+                var hasPendingTx = await _nodeClient.HasPendingTransaction(txAddress);
+                if (hasPendingTx)
+                {
+                    _log.WriteInfo(nameof(Build), new { txAddress }, "Address has pending transaction");
+
+                    return BadRequest(ErrorResponse.Create($"{txAddress} has pending transaction"));
+                }
+            }
+
             var result = await _nodeClient.Broadcast(context.Transactions);
 
             await _broadcastRepository.AddAsync(request.OperationId, result.Hash, result.Block);

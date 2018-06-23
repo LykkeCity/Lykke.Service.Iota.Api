@@ -15,5 +15,6 @@ namespace Lykke.Service.Iota.Api.Core.Services
         Task<(string Hash, long Block)> Broadcast(string[] trytes);
         Task<(string Hash, long Block)> Reattach(string tailTxHash);
         Task Promote(string tailTxHash, int attempts = 10, int depth = 27);
+        string[] GetTransactionNonZeroAddresses(string[] trytes);
     }
 }

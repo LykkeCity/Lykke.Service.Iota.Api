@@ -139,6 +139,16 @@ namespace Lykke.Service.Iota.Api.Services
             return await Run(() => _repository.CheckConsistencyAsync(new List<Hash> { new Hash(hash) }));
         }
 
+        public string[] GetTransactionNonZeroAddresses(string[] trytes)
+        {
+            var txs = trytes.Select(f => Transaction.FromTrytes(new TransactionTrytes(f)));
+
+            return txs
+                .Where(f => f.Value != 0)
+                .Select(f => f.Hash.Value)
+                .ToArray();
+        }
+
         public async Task<(string Hash, long Block)> Broadcast(string[] trytes)
         {
             _log.WriteInfo(nameof(Broadcast), "", "Get txs from trytes");
