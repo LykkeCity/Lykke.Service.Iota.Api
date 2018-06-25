@@ -38,13 +38,18 @@ namespace Lykke.Service.Iota.Api.Services
             return response.ToJson();
         }
 
-        public async Task<bool> HasPendingTransaction(string address)
+        public async Task<bool> HasPendingTransaction(string address, bool cashOutTxsOnly = false)
         {
             var txsHashes = await Run(() => _repository.FindTransactionsByAddressesAsync(new List<Address> { new Address(address) }));
             var txs = await GetTransactions(txsHashes.Hashes);
-            var nonZeroTxs = txs
-                .Where(f => f.Value != 0)
-                .OrderByDescending(f => f.AttachmentTimestamp)
+
+            txs = txs.Where(f => f.Value < 0).ToList();
+            if (!cashOutTxsOnly)
+            {
+                txs = txs.Where(f => f.Value > 0).ToList();
+            }
+
+            var nonZeroTxs = txs.OrderByDescending(f => f.AttachmentTimestamp)
                 .Select(f => f.Hash.Value)
                 .Distinct();
 
@@ -74,7 +79,7 @@ namespace Lykke.Service.Iota.Api.Services
             }
         }
 
-        public async Task<bool> WereAddressesSpentFrom(string address)
+        public async Task<bool> HasCashOutTransaction(string address)
         {
             var response = await Run(() => _repository.WereAddressesSpentFromAsync(new List<Address> { new Address(address) }));
 
@@ -149,23 +154,83 @@ namespace Lykke.Service.Iota.Api.Services
                 .ToArray();
         }
 
-        public async Task<(string Hash, long Block)> Broadcast(string[] trytes)
+        public async Task<(string Hash, long? Block, string Error)> Broadcast(string[] trytes)
         {
-            _log.WriteInfo(nameof(Broadcast), "", "Get txs from trytes");
-            var txs = trytes.Select(f => Transaction.FromTrytes(new TransactionTrytes(f)));
+            var depth = 8;
+            var minWeightMagnitude = 14;
 
-            _log.WriteInfo(nameof(Broadcast), "", "Send txs");
-            var txsTrities = await Run(() => _repository.SendTrytesAsync(txs));
+            _log.WriteInfo(nameof(Broadcast), "", "Get txs from trytes");
+            var transactions = trytes.Select(f => Transaction.FromTrytes(new TransactionTrytes(f)));
+
+            _log.WriteInfo(nameof(Broadcast), "", "Get transactions to approve");
+            var transactionsToApprove = await _repository.GetTransactionsToApproveAsync(depth);
+
+            _log.WriteInfo(nameof(Broadcast), "", "Attach to tangle");
+            var attachResultTrytes = await _repository.AttachToTangleAsync(
+                transactionsToApprove.BranchTransaction,
+                transactionsToApprove.TrunkTransaction,
+                transactions,
+                minWeightMagnitude);
+
+            var error = await ValidateTransactions(transactions);
+            if (!string.IsNullOrEmpty(error))
+            {
+                return (null, null, error);
+            }
+
+            _log.WriteInfo(nameof(Broadcast), "", "Broadcast and store transactions");
+            await _repository.BroadcastAndStoreTransactionsAsync(attachResultTrytes);
 
             _log.WriteInfo(nameof(Broadcast), "", "Get broadcated txs");
-            var txsBroadcasted = txsTrities.Select(f => Transaction.FromTrytes(f)).ToList();
+            var txsBroadcasted = attachResultTrytes.Select(f => Transaction.FromTrytes(f)).ToList();
 
             _log.WriteInfo(nameof(Broadcast), "", "Get tailed tx");
             var tailTx = txsBroadcasted.Where(f => f.IsTail).First();
 
             _log.WriteInfo(nameof(Broadcast), tailTx.ToJson(), "Tailed tx");
 
-            return (tailTx.Hash.Value, tailTx.Timestamp);
+            return (tailTx.Hash.Value, tailTx.Timestamp, null);
+        }
+
+        private async Task<string> ValidateTransactions(IEnumerable<Transaction> transactions)
+        {
+            foreach (var transaction in transactions)
+            {
+                var address = transaction.Address.Value;
+
+                var addressHasCashOut = await HasCashOutTransaction(address);
+                if (addressHasCashOut)
+                {
+                    return $"Address {address} has completed cash-out transaction";
+                }
+
+                if (transaction.Value < 0)
+                {
+                    var balance = await GetAddressBalance(address, 0);
+                    if (balance != transaction.Value)
+                    {
+                        return $"Input address {address} has wrong amount. " +
+                            $"Current amount:{balance} Transaction amount: {transaction.Value}. These values must be equal";
+                    }
+
+                    var hasPendingTx = await HasPendingTransaction(address);
+                    if (hasPendingTx)
+                    {
+                        return $"Input address {address} has pending transaction";
+                    }
+                }
+
+                if (transaction.Value > 0)
+                {
+                    var hasPendingTx = await HasPendingTransaction(address, true);
+                    if (hasPendingTx)
+                    {
+                        return $"Output address {address} has pending cash-out transaction";
+                    }
+                }
+            }
+
+            return null;
         }
 
         public async Task<(string Hash, long Block)> Reattach(string tailTxHash)

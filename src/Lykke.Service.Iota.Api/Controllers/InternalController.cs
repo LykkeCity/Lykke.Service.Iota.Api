@@ -66,7 +66,7 @@ namespace Lykke.Service.Iota.Api.Controllers
         [HttpGet("address/{hash}/can-recieve")]
         public async Task<bool> HasCashOut([Required] string hash)
         {
-            var result = await _nodeClient.WereAddressesSpentFrom(hash);
+            var result = await _nodeClient.HasCashOutTransaction(hash);
 
             return !result;
         }

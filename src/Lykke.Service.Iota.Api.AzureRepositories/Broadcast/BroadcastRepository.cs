@@ -39,6 +39,18 @@ namespace Lykke.Service.Iota.Api.AzureRepositories
             });
         }
 
+        public async Task AddFailedAsync(Guid operationId, string error)
+        {
+            await _table.InsertOrReplaceAsync(new BroadcastEntity
+            {
+                PartitionKey = GetPartitionKey(operationId),
+                RowKey = GetRowKey(operationId),
+                BroadcastedUtc = DateTime.UtcNow,
+                State = BroadcastState.Failed,
+                Error = error
+            });
+        }
+
         public async Task UpdateHashAsync(Guid operationId, string hash, long block)
         {
             await _table.ReplaceAsync(GetPartitionKey(operationId), GetRowKey(operationId), x =>

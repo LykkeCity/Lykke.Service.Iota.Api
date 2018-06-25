@@ -220,7 +220,7 @@ namespace Lykke.Service.Iota.Job.Services
             var inputs = await _addressInputRepository.GetAsync(virtualAddress);
             foreach (var input in inputs)
             {
-                var wasSpent = await _nodeClient.WereAddressesSpentFrom(input.Address);
+                var wasSpent = await _nodeClient.HasCashOutTransaction(input.Address);
                 if (wasSpent)
                 {
                     _log.WriteInfo(nameof(RefreshInputs),

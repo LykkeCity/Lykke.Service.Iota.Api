@@ -73,44 +73,6 @@ namespace Lykke.Service.Iota.Api.Controllers
                 return BadRequest(ErrorResponse.Create($"{nameof(request.Amount)} can not be converted to long"));
             }
 
-            var addressInputs = await _addressInputRepository.GetAsync(request.FromAddress);
-            if (!addressInputs.Any())
-            {
-                return BadRequest(ErrorResponse.Create($"Inputs for {nameof(request.FromAddress)} were not found"));
-            }
-
-            foreach (var addressInput in addressInputs)
-            {
-                var hasPendingTx = await _nodeClient.HasPendingTransaction(addressInput.Address);
-                if (hasPendingTx)
-                {
-                    _log.WriteInfo(nameof(Build), new { addressInput.Address }, "Input address has pending transaction");
-
-                    return BadRequest(ErrorResponse.Create($"{addressInput.Address} has pending transaction"));
-                }
-            }
-
-            var fromAddressBalance = await _iotaService.GetVirtualAddressBalance(request.FromAddress);
-            if (amount > fromAddressBalance)
-            {
-                return BadRequest(BlockchainErrorResponse.FromKnownError(BlockchainErrorCode.NotEnoughtBalance));
-            }
-
-            var txType = request.ToAddress.StartsWith(Consts.VirtualAddressPrefix) ?
-                Core.Shared.TransactionType.Cashin : Core.Shared.TransactionType.Cashout;
-            var toAddress = request.ToAddress;
-            if (txType == Core.Shared.TransactionType.Cashin)
-            {
-                var toRealAddress = await _iotaService.GetRealAddress(toAddress);
-                var hasPendingTx = await _nodeClient.HasPendingTransaction(toRealAddress);
-                if (hasPendingTx)
-                {
-                    _log.WriteInfo(nameof(Build), new { address = toRealAddress }, "Output address has pending transaction");
-
-                    return BadRequest(ErrorResponse.Create($"The output {toRealAddress} address has pending transaction"));
-                }
-            }
-
             var build = await _buildRepository.GetAsync(request.OperationId);
             if (build != null)
             {
@@ -123,6 +85,21 @@ namespace Lykke.Service.Iota.Api.Controllers
             await _log.WriteInfoAsync(nameof(TransactionsController), nameof(Build),
                 request.ToJson(), "Build transaction");
 
+            var txType = request.ToAddress.StartsWith(Consts.VirtualAddressPrefix) ?
+                Core.Shared.TransactionType.Cashin : Core.Shared.TransactionType.Cashout;
+
+            var inputsValidation = await ValidateTxInputs(request, amount);
+            if (inputsValidation != null)
+            {
+                return BadRequest(inputsValidation);
+            }
+
+            var outputsValidation = await ValidateTxOutputs(request, amount, txType);
+            if (inputsValidation != null)
+            {
+                return BadRequest(inputsValidation);
+            }
+
             var transactionContext = GetTxContext(request, amount, txType);
 
             await _buildRepository.AddAsync(request.OperationId, transactionContext);
@@ -133,7 +110,94 @@ namespace Lykke.Service.Iota.Api.Controllers
             });
         }
 
-        private static string GetTxContext(BuildSingleTransactionRequest request, long amount,
+        private async Task<BlockchainErrorResponse> ValidateTxInputs(BuildSingleTransactionRequest request, long amount)
+        {
+            var fromAddressBalance = await _iotaService.GetVirtualAddressBalance(request.FromAddress);
+            if (amount > fromAddressBalance)
+            {
+                return BlockchainErrorResponse.FromKnownError(BlockchainErrorCode.NotEnoughtBalance);
+            }
+
+            var addressInputs = await _addressInputRepository.GetAsync(request.FromAddress);
+            if (!addressInputs.Any())
+            {
+                return BlockchainErrorResponse.FromUnknownError(
+                    $"Inputs for {nameof(request.FromAddress)} were not found");
+            }
+
+            foreach (var addressInput in addressInputs)
+            {
+                var addressHasCashOut = await _nodeClient.HasCashOutTransaction(addressInput.Address);
+                if (addressHasCashOut)
+                {
+                    _log.WriteInfo(nameof(Build), new { addressInput.Address },
+                        "Input address has completed cash-out transaction");
+
+                    return BlockchainErrorResponse.FromUnknownError(
+                        $"Input address {addressInput.Address} has completed cash-out transaction");
+                }
+
+                var hasPendingTx = await _nodeClient.HasPendingTransaction(addressInput.Address);
+                if (hasPendingTx)
+                {
+                    _log.WriteInfo(nameof(Build), new { addressInput.Address },
+                        "Input address has pending transaction");
+
+                    return BlockchainErrorResponse.FromUnknownError(
+                        $"{addressInput.Address} has pending transaction");
+                }
+            }
+
+            return null;
+        }
+
+        private async Task<BlockchainErrorResponse> ValidateTxOutputs(BuildSingleTransactionRequest request, long amount,
+            Core.Shared.TransactionType type)
+        {
+            var toAddress = request.ToAddress;
+
+            if (type == Core.Shared.TransactionType.Cashin)
+            {
+                var toRealAddress = await _iotaService.GetRealAddress(toAddress);
+
+                var addressHasCashOut = await _nodeClient.HasCashOutTransaction(toRealAddress);
+                if (addressHasCashOut)
+                {
+                    _log.WriteInfo(nameof(Build), new { Address = toRealAddress },
+                        "Output address has completed cash-out transaction");
+
+                    return BlockchainErrorResponse.FromUnknownError(
+                        $"Output address {toRealAddress} has completed cash-out transaction");
+                }
+
+                var hasPendingTx = await _nodeClient.HasPendingTransaction(toRealAddress, true);
+                if (hasPendingTx)
+                {
+                    _log.WriteInfo(nameof(Build), new { Address = toRealAddress },
+                        "Output address has pending transaction");
+
+                    return BlockchainErrorResponse.FromUnknownError(
+                        $"The output {toRealAddress} address has pending transaction");
+                }
+            }
+
+            if (type == Core.Shared.TransactionType.Cashout)
+            {
+                var addressHasCashOut = await _nodeClient.HasCashOutTransaction(toAddress);
+                if (addressHasCashOut)
+                {
+                    _log.WriteInfo(nameof(Build), new { Address = toAddress },
+                        "Output address has completed cash-out transaction");
+
+                    return BlockchainErrorResponse.FromUnknownError(
+                        $"Output address {toAddress} has completed cash-out transaction");
+                }
+            }
+
+            return null;
+        }
+
+        private string GetTxContext(BuildSingleTransactionRequest request, long amount,
             Core.Shared.TransactionType type)
         {
             return new TransactionContext
@@ -187,21 +251,15 @@ namespace Lykke.Service.Iota.Api.Controllers
 
             _log.WriteInfo(nameof(Broadcast), request.ToJson(), "Broadcast transaction");
 
-            var txAddresses = _nodeClient.GetTransactionNonZeroAddresses(context.Transactions);
-            foreach (var txAddress in txAddresses)
+            var result = await _nodeClient.Broadcast(context.Transactions);
+            if (!result.Block.HasValue)
             {
-                var hasPendingTx = await _nodeClient.HasPendingTransaction(txAddress);
-                if (hasPendingTx)
-                {
-                    _log.WriteInfo(nameof(Build), new { txAddress }, "Address has pending transaction");
+                await _broadcastRepository.AddFailedAsync(request.OperationId, result.Error);
 
-                    return BadRequest(ErrorResponse.Create($"{txAddress} has pending transaction"));
-                }
+                return Ok();
             }
 
-            var result = await _nodeClient.Broadcast(context.Transactions);
-
-            await _broadcastRepository.AddAsync(request.OperationId, result.Hash, result.Block);
+            await _broadcastRepository.AddAsync(request.OperationId, result.Hash, result.Block.Value);
             await _broadcastInProgressRepository.AddAsync(request.OperationId, result.Hash);
 
             return Ok();
