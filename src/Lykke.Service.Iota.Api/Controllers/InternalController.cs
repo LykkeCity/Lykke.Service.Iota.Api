@@ -63,6 +63,12 @@ namespace Lykke.Service.Iota.Api.Controllers
             return await _iotaService.GetVirtualAddressInputs(address);
         }
 
+        [HttpGet("address/{hash}/balance")]
+        public async Task<long> HasCashOut([Required] string hash, int threshold)
+        {
+            return await _nodeClient.GetAddressBalance(hash, threshold);
+        }
+
         [HttpGet("address/{hash}/can-recieve")]
         public async Task<bool> HasCashOut([Required] string hash)
         {

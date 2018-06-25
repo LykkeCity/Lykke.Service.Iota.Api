@@ -206,7 +206,7 @@ namespace Lykke.Service.Iota.Api.Services
 
                 if (transaction.Value < 0)
                 {
-                    var balance = await GetAddressBalance(address, 0);
+                    var balance = await GetAddressBalance(address, 1);
                     if (balance != transaction.Value)
                     {
                         return $"Input address {address} has wrong amount. " +
