@@ -113,23 +113,24 @@ namespace Lykke.Service.Iota.Api.Services
             return false;
         }
 
-        public async Task<(bool Included, string TxHash, string TxAddress, long TxValue, long TxBlock)> GetBundleInfo(string hash)
+        public async Task<(bool Included, long Value, string Address, long Block, string TxFirst, string TxLast)> GetBundleInfo(string hash)
         {
             var tx = await GetTransaction(hash);
             var txsHashes = await Run(() => _repository.FindTransactionsByBundlesAsync(new List<Hash> { tx.BundleHash }));
             var txs = await GetTransactions(txsHashes.Hashes);
             var txsTail = txs.Where(f => f.IsTail).OrderByDescending(f => f.AttachmentTimestamp);
-            var txLatest = txsTail.First();
+            var txFirst = txsTail.Last();
+            var txLast = txsTail.First();
 
             foreach (var txTail in txsTail)
             {
                 if (await TransactionIncluded(txTail.Hash.Value))
                 {
-                    return (true, txTail.Hash.Value, txTail.Address.Value, txTail.Value, txTail.AttachmentTimestamp);
+                    return (true, txTail.Value, txTail.Address.Value, txTail.AttachmentTimestamp, txFirst.Hash.Value, txLast.Hash.Value);
                 }
             }
 
-            return (false, txLatest.Hash.Value, txLatest.Address.Value, txLatest.Value, txLatest.AttachmentTimestamp);
+            return (false, txFirst.Value, txFirst.Address.Value, txLast.AttachmentTimestamp, txFirst.Hash.Value, txLast.Hash.Value);
         }
 
         public async Task<(long Value, long Block)> GetTransactionInfo(string hash)

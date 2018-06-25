@@ -61,10 +61,10 @@ namespace Lykke.Service.Iota.Job.Services
                 if (bundleInfo.Included)
                 {
                     _log.WriteInfo(nameof(UpdateBroadcasts),
-                        new { item.OperationId, amount = bundleInfo.TxValue, bundleInfo.TxBlock},
+                        new { item.OperationId, amount = bundleInfo.Value, bundleInfo.Block},
                         $"Brodcast update is detected");
 
-                    await _broadcastRepository.SaveAsCompletedAsync(item.OperationId, bundleInfo.TxValue, 0, bundleInfo.TxBlock);
+                    await _broadcastRepository.SaveAsCompletedAsync(item.OperationId, bundleInfo.Value, 0, bundleInfo.Block);
 
                     _chaosKitty.Meow(item.OperationId);
 
@@ -111,7 +111,7 @@ namespace Lykke.Service.Iota.Job.Services
                 var info = await _nodeClient.GetBundleInfo(item.Hash);
                 if (!info.Included)
                 {
-                    await _nodeClient.Promote(info.TxHash, 3, 5);
+                    await _nodeClient.Promote(info.TxFirst, 3, 5);
                 }
             }
         }
@@ -125,13 +125,13 @@ namespace Lykke.Service.Iota.Job.Services
                 var info = await _nodeClient.GetBundleInfo(item.Hash);
                 if (!info.Included)
                 {
-                    var mins = (DateTime.UtcNow - DateTimeOffset.FromUnixTimeMilliseconds(info.TxBlock).UtcDateTime).TotalMinutes;
+                    var mins = (DateTime.UtcNow - DateTimeOffset.FromUnixTimeMilliseconds(info.Block).UtcDateTime).TotalMinutes;
 
                     if (!info.Included && mins > 3)
                     {
-                        _log.WriteInfo(nameof(ReattachBroadcasts), new { info.TxHash }, $"Reattach transaction");
+                        _log.WriteInfo(nameof(ReattachBroadcasts), new { info.TxFirst }, $"Reattach transaction");
 
-                        var result = await _nodeClient.Reattach(info.TxHash);
+                        var result = await _nodeClient.Reattach(info.TxFirst);
                     }
                 }
             }
