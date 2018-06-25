@@ -125,13 +125,18 @@ namespace Lykke.Service.Iota.Job.Services
                 var info = await _nodeClient.GetBundleInfo(item.Hash);
                 if (!info.Included)
                 {
-                    var mins = (DateTime.UtcNow - DateTimeOffset.FromUnixTimeMilliseconds(info.Block).UtcDateTime).TotalMinutes;
+                    var mins = (DateTime.UtcNow - DateTimeOffset.FromUnixTimeMilliseconds(info.Block).UtcDateTime)
+                        .TotalMinutes;
 
                     if (!info.Included && mins > 3)
                     {
-                        _log.WriteInfo(nameof(ReattachBroadcasts), new { info.TxLast }, $"Reattach transaction");
+                        _log.WriteInfo(nameof(ReattachBroadcasts), new { info.TxLast }, 
+                            $"Reattach transaction");
 
                         var result = await _nodeClient.Reattach(info.TxLast);
+
+                        _log.WriteInfo(nameof(ReattachBroadcasts), new { NewHash = result.Hash }, 
+                            $"Reattach transaction - finished");
                     }
                 }
             }

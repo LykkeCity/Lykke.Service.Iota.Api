@@ -43,19 +43,19 @@ namespace Lykke.Service.Iota.Api.Services
             var txsHashes = await Run(() => _repository.FindTransactionsByAddressesAsync(new List<Address> { new Address(address) }));
             var txs = await GetTransactions(txsHashes.Hashes);
 
-            txs = txs.Where(f => f.Value < 0).ToList();
+            var nonZeroTx = txs.Where(f => f.Value < 0).ToList();
             if (!cashOutTxsOnly)
             {
-                txs = txs.Where(f => f.Value > 0).ToList();
+                nonZeroTx.AddRange(txs.Where(f => f.Value > 0).ToList());
             }
 
-            var nonZeroTxs = txs.OrderByDescending(f => f.AttachmentTimestamp)
+            var nonZeroTxHashes = txs.OrderByDescending(f => f.AttachmentTimestamp)
                 .Select(f => f.Hash.Value)
                 .Distinct();
 
-            foreach (var nonZeroTx in nonZeroTxs)
+            foreach (var nonZeroTxHash in nonZeroTxHashes)
             {
-                var bundleInfo = await GetBundleInfo(nonZeroTx);
+                var bundleInfo = await GetBundleInfo(nonZeroTxHash);
                 if (!bundleInfo.Included)
                 {
                     return true;
