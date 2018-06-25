@@ -45,7 +45,7 @@ namespace Lykke.Service.Iota.Api.AzureRepositories
             {
                 PartitionKey = GetPartitionKey(operationId),
                 RowKey = GetRowKey(operationId),
-                BroadcastedUtc = DateTime.UtcNow,
+                FailedUtc = DateTime.UtcNow,
                 State = BroadcastState.Failed,
                 Error = error
             });

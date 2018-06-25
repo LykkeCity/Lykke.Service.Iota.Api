@@ -207,10 +207,11 @@ namespace Lykke.Service.Iota.Api.Services
                 if (transaction.Value < 0)
                 {
                     var balance = await GetAddressBalance(address, 1);
-                    if (balance != transaction.Value)
+                    if (balance != -transaction.Value)
                     {
                         return $"Input address {address} has wrong amount. " +
-                            $"Current amount:{balance} Transaction amount: {transaction.Value}. These values must be equal";
+                            $"Current amount:{balance} Transaction amount: {transaction.Value}. " +
+                            $"These values must be equal";
                     }
 
                     var hasPendingTx = await HasPendingTransaction(address);
