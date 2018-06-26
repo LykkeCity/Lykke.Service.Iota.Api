@@ -16,16 +16,19 @@ namespace Lykke.Service.Iota.Api.Controllers
         private readonly INodeClient _nodeClient;
         private readonly IAddressRepository _addressRepository;
         private readonly IAddressInputRepository _addressInputRepository;
+        private readonly IAddressVirtualRepository _addressVirtualRepository;
         private readonly IIotaService _iotaService;
 
         public InternalController(INodeClient nodeClient,
             IAddressRepository addressRepository, 
             IAddressInputRepository addressInputRepository,
+            IAddressVirtualRepository addressVirtualRepository,
             IIotaService iotaService)
         {
             _nodeClient = nodeClient;
             _addressRepository = addressRepository;
             _addressInputRepository = addressInputRepository;
+            _addressVirtualRepository = addressVirtualRepository;
             _iotaService = iotaService;
         }
 
@@ -38,6 +41,7 @@ namespace Lykke.Service.Iota.Api.Controllers
         {
             await _addressRepository.SaveAsync(address, virtualAddressRequest.RealAddress, virtualAddressRequest.Index);
             await _addressInputRepository.SaveAsync(address, virtualAddressRequest.RealAddress, virtualAddressRequest.Index);
+            await _addressVirtualRepository.SaveAsync(virtualAddressRequest.RealAddress, address);
 
             return Ok();
         }
