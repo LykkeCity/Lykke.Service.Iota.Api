@@ -30,14 +30,13 @@ namespace Lykke.Service.Iota.Api.AzureRepositories
             return await _table.GetDataAsync(GetPartitionKey(addressVirtual), GetRowKey(address));
         }
 
-        public async Task SaveAsync(string addressVirtual, string address, long index, bool hasCashOut)
+        public async Task SaveAsync(string addressVirtual, string address, long index)
         {
             await _table.InsertOrReplaceAsync(new AddressEntity
             {
                 PartitionKey = GetPartitionKey(addressVirtual),
                 RowKey = GetRowKey(address),
-                Index = index,
-                HasCashOut = hasCashOut
+                Index = index
             });
         }
 

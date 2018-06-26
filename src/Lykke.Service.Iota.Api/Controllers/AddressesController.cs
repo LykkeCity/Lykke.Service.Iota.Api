@@ -4,6 +4,7 @@ using Lykke.Service.Iota.Api.Settings;
 using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
 using System.Net;
+using System.Threading.Tasks;
 
 namespace Lykke.Service.Iota.Api.Controllers
 {
@@ -38,6 +39,18 @@ namespace Lykke.Service.Iota.Api.Controllers
             {
                 _settings.ExplorerUrl.Replace("{address}", address)
             };
+        }
+
+        [HttpGet("{address}/underlying")]
+        [ProducesResponseType(typeof(AddressValidationResponse), (int)HttpStatusCode.OK)]
+        public async Task<IActionResult> GetAddressUnderlying([Required] string address)
+        {
+            var underlyingAddress = await _iotaService.GetRealAddress(address);
+
+            return Ok(new
+            {
+                underlyingAddress
+            });
         }
     }
 }

@@ -19,7 +19,5 @@ namespace Lykke.Service.Iota.Api.AzureRepositories
         }
 
         public long Index { get; set; }
-
-        public bool HasCashOut { get; set; }
     }
 }

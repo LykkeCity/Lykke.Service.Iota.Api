@@ -36,7 +36,7 @@ namespace Lykke.Service.Iota.Api.Controllers
         public async Task<IActionResult> PostVirtualAddress([Required] string address, 
             [FromBody] VirtualAddressRequest virtualAddressRequest)
         {
-            await _addressRepository.SaveAsync(address, virtualAddressRequest.RealAddress, virtualAddressRequest.Index, false);
+            await _addressRepository.SaveAsync(address, virtualAddressRequest.RealAddress, virtualAddressRequest.Index);
             await _addressInputRepository.SaveAsync(address, virtualAddressRequest.RealAddress, virtualAddressRequest.Index);
 
             return Ok();

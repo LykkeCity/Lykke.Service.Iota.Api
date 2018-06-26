@@ -6,7 +6,7 @@ namespace Lykke.Service.Iota.Api.Core.Repositories
 {
     public interface IAddressRepository
     {
-        Task SaveAsync(string addressVirtual, string address, long index, bool hasCashOut);
+        Task SaveAsync(string addressVirtual, string address, long index);
         Task DeleteAsync(string addressVirtual, string address);
         Task<(IEnumerable<IAddress> Entities, string ContinuationToken)> GetAsync(string addressVirtual, int take, string continuation);
         Task<IAddress> GetAsync(string addressVirtual, string address);
