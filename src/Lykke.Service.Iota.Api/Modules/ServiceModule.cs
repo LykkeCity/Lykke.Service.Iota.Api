@@ -24,6 +24,10 @@ namespace Lykke.Service.Iota.Api.Modules
         {
             var connectionStringManager = _settings.ConnectionString(x => x.Db.DataConnString);
 
+            builder.RegisterInstance(_settings.CurrentValue)
+                .As<IotaApiSettings>()
+                .SingleInstance();
+
             builder.RegisterInstance(_log)
                 .As<ILog>()
                 .SingleInstance();

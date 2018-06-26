@@ -111,7 +111,7 @@ namespace Lykke.Service.Iota.Job.Services
                 var info = await _nodeClient.GetBundleInfo(item.Hash);
                 if (!info.Included)
                 {
-                    await _nodeClient.Promote(info.TxLast, 2);
+                    await _nodeClient.Promote(info.TxLast, 1, 10);
                 }
             }
         }
