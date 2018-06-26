@@ -27,6 +27,10 @@ namespace Lykke.Service.Iota.Job.Modules
         {
             var connectionStringManager = _settings.ConnectionString(x => x.Db.DataConnString);
 
+            builder.RegisterInstance(_settings.CurrentValue)
+                .As<IotaJobSettings>()
+                .SingleInstance();
+
             builder.RegisterChaosKitty(_settings.CurrentValue.ChaosKitty);
 
             builder.RegisterInstance(_log)
@@ -80,7 +84,6 @@ namespace Lykke.Service.Iota.Job.Modules
 
             builder.RegisterType<PeriodicalService>()
                 .As<IPeriodicalService>()
-                .WithParameter(TypedParameter.From(_settings.CurrentValue.MinConfirmations))
                 .SingleInstance();
 
             builder.RegisterType<NodeClient>()

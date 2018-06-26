@@ -292,7 +292,9 @@ namespace Lykke.Service.Iota.Api.Services
                 }
             }
 
-            _log.WriteInfo(nameof(Promote), new { successAttempts, tailTxHash, lastError }, "Promotion results");
+            _log.WriteInfo(nameof(Promote), 
+                new { successAttempts, attempts, depth, tailTxHash, lastError }, 
+                "Promotion results");
         }
 
         private async Task<Transaction> GetTransaction(string hash)

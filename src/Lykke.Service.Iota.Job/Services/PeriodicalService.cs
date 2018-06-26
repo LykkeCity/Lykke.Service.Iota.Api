@@ -9,6 +9,7 @@ using Tangle.Net.Utils;
 using System;
 using Newtonsoft.Json;
 using Lykke.Service.Iota.Api.Core.Shared;
+using Lykke.Service.Iota.Job.Settings;
 
 namespace Lykke.Service.Iota.Job.Services
 {
@@ -24,7 +25,7 @@ namespace Lykke.Service.Iota.Job.Services
         private readonly IBuildRepository _buildRepository;
         private readonly INodeClient _nodeClient;
         private readonly IIotaService _iotaService;
-        private readonly int _minConfirmations;
+        private readonly IotaJobSettings _settings;
 
         public PeriodicalService(ILog log,
             IChaosKitty chaosKitty,
@@ -36,7 +37,7 @@ namespace Lykke.Service.Iota.Job.Services
             IBuildRepository buildRepository,
             INodeClient nodeClient,
             IIotaService iotaService,
-            int minConfirmations)
+            IotaJobSettings settings)
         {
             _log = log.CreateComponentScope(nameof(PeriodicalService));
             _chaosKitty = chaosKitty;
@@ -48,7 +49,7 @@ namespace Lykke.Service.Iota.Job.Services
             _buildRepository = buildRepository;
             _nodeClient = nodeClient;
             _iotaService = iotaService;
-            _minConfirmations = minConfirmations;
+            _settings = settings;
         }
 
         public async Task UpdateBroadcasts()
@@ -111,7 +112,7 @@ namespace Lykke.Service.Iota.Job.Services
                 var info = await _nodeClient.GetBundleInfo(item.Hash);
                 if (!info.Included)
                 {
-                    await _nodeClient.Promote(info.TxLast, 1, 10);
+                    await _nodeClient.Promote(info.TxLast, _settings.PromoteAttempts, _settings.PromoteHeight);
                 }
             }
         }
