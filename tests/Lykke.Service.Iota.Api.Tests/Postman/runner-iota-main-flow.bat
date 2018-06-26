@@ -1,1 +1,1 @@
-newman run iota-main-flow.postman_collection.json -e dev.postman_environment.json
+newman run iota-main-flow.postman_collection.json -e dev.postman_environment.json --bail

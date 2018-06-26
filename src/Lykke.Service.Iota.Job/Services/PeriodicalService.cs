@@ -126,10 +126,9 @@ namespace Lykke.Service.Iota.Job.Services
                 var info = await _nodeClient.GetBundleInfo(item.Hash);
                 if (!info.Included)
                 {
-                    var mins = (DateTime.UtcNow - DateTimeOffset.FromUnixTimeMilliseconds(info.Block).UtcDateTime)
-                        .TotalMinutes;
+                    var blockTime = DateTime.UtcNow - DateTimeOffset.FromUnixTimeMilliseconds(info.Block).UtcDateTime;
 
-                    if (!info.Included && mins > 3)
+                    if (!info.Included && blockTime > _settings.ReattachmentPeriod)
                     {
                         _log.WriteInfo(nameof(ReattachBroadcasts), new { info.TxLast }, 
                             $"Reattach transaction");
