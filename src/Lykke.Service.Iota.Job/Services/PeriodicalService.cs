@@ -132,13 +132,10 @@ namespace Lykke.Service.Iota.Job.Services
                     {
                         var txLast = info.Txs.Last();
 
-                        _log.WriteInfo(nameof(ReattachBroadcasts), new { txLast }, 
-                            $"Reattach transaction");
-
                         var result = await _nodeClient.Reattach(txLast);
 
-                        _log.WriteInfo(nameof(ReattachBroadcasts), new { NewHash = result.Hash }, 
-                            $"Reattach transaction - finished");
+                        _log.WriteInfo(nameof(ReattachBroadcasts), new { New = result.Hash, Old = txLast }, 
+                            $"Reattach transaction");
                     }
                 }
             }
@@ -209,7 +206,7 @@ namespace Lykke.Service.Iota.Job.Services
 
             if (balance == 0 && deleteZeroBalance)
             {
-                _log.WriteInfo(nameof(RefreshAddressBalance), new { virtualAddress },
+                _log.WriteInfo(nameof(RefreshAddressBalance), new { virtualAddress, balance = 0 },
                     $"Zero balance is detected");
 
                 await RefreshInputs(virtualAddress);

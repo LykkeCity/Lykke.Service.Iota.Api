@@ -300,7 +300,7 @@ namespace Lykke.Service.Iota.Api.Services
             }
 
             _log.WriteInfo(nameof(Promote), 
-                new { successAttempts, attempts, depth, error = lastError, txs }, 
+                new { successAttempts, attempts, depth, error = lastError, tx, txs }, 
                 "Promotion results");
         }
 
