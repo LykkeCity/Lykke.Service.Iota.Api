@@ -289,7 +289,7 @@
 			]
 		},
 		{
-			"name": "Send from DW to HW (20 IOTA)",
+			"name": "Send from DW to HW (5 IOTA)",
 			"description": "",
 			"item": [
 				{
@@ -371,7 +371,7 @@
 						{
 							"listen": "prerequest",
 							"script": {
-								"id": "f917eb87-3fcf-421a-a317-d037b15dea4f",
+								"id": "a5d9a9b3-248b-43ed-af59-b2196b5fa94f",
 								"type": "text/javascript",
 								"exec": [
 									"function S4() {",
@@ -389,7 +389,7 @@
 									"var dwBalance = pm.environment.get(\"dwBalance\")",
 									"",
 									"pm.environment.set(\"operationId\", newGuid);",
-									"pm.environment.set(\"amount-1st-dw-hw\", 20);"
+									"pm.environment.set(\"amount-1st-dw-hw\", 5);"
 								]
 							}
 						},
@@ -796,6 +796,28 @@
 						}
 					},
 					"response": []
+				}
+			],
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"id": "85de6852-effc-40aa-9f22-5e34ffe777b9",
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"id": "2ab82db8-14ed-4a1c-bb4d-91f5e66ecce4",
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
 				}
 			]
 		},
@@ -1715,7 +1737,7 @@
 						{
 							"listen": "test",
 							"script": {
-								"id": "d6562276-8d5a-40ee-98ec-7d6857bdb71c",
+								"id": "c6460279-24ad-4bca-8469-e5b48200c2bb",
 								"type": "text/javascript",
 								"exec": [
 									"pm.test(\"Status code is 200\", function () {",
@@ -1724,6 +1746,8 @@
 									"",
 									"pm.test(\"Check DW balance\", function() {",
 									"    var jsonData = pm.response.json();",
+									"    ",
+									"    console.info(\"jsonData: \" + jsonData);",
 									"",
 									"    var dwAddress = pm.environment.get(\"dw-address\")",
 									"    var dwBalanceCurrent = 0;",

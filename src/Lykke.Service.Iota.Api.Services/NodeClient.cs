@@ -13,14 +13,18 @@ using Tangle.Net.Repository.Client;
 using Tangle.Net.Repository.Responses;
 using Common;
 using Lykke.Service.Iota.Api.Services.Helpers;
+using Flurl.Http;
 
 namespace Lykke.Service.Iota.Api.Services
 {
     public class NodeClient : INodeClient
     {
+        private const string PromoteError_OldTransaction = "transaction is too old";
+        private const string PromoteError_Consistency = "entry point failed consistency check";
+
         private readonly ILog _log;
         private readonly RestIotaRepository _repository;
-        private readonly RestIotaClient _client;
+        private readonly string _nodeUrl;
 
         public NodeClient(ILog log, string nodeUrl)
         {
@@ -28,7 +32,7 @@ namespace Lykke.Service.Iota.Api.Services
 
             _log = log.CreateComponentScope(nameof(NodeClient));
             _repository = new RestIotaRepository(restClient, new PoWService(new CpuPearlDiver()));
-            _client = new RestIotaClient(restClient);
+            _nodeUrl = nodeUrl;
         }
 
         public async Task<string> GetNodeInfo()
@@ -113,24 +117,25 @@ namespace Lykke.Service.Iota.Api.Services
             return false;
         }
 
-        public async Task<(bool Included, long Value, string Address, long Block, string TxFirst, string TxLast)> GetBundleInfo(string hash)
+        public async Task<(bool Included, long Value, string Address, long Block, string[] Txs)> GetBundleInfo(string hash)
         {
             var tx = await GetTransaction(hash);
             var txsHashes = await Run(() => _repository.FindTransactionsByBundlesAsync(new List<Hash> { tx.BundleHash }));
             var txs = await GetTransactions(txsHashes.Hashes);
-            var txsTail = txs.Where(f => f.IsTail).OrderByDescending(f => f.AttachmentTimestamp);
+            var txsTail = txs.Where(f => f.IsTail);
+            var txsTailHashes = txsTail.Select(f => f.Hash.Value).ToArray();
             var txFirst = txsTail.Last();
             var txLast = txsTail.First();
 
-            foreach (var txTail in txsTail)
+            foreach (var txTail in txsTail.OrderByDescending(f => f.AttachmentTimestamp))
             {
                 if (await TransactionIncluded(txTail.Hash.Value))
                 {
-                    return (true, txTail.Value, txTail.Address.Value, txTail.AttachmentTimestamp, txFirst.Hash.Value, txLast.Hash.Value);
+                    return (true, txTail.Value, txTail.Address.Value, txTail.AttachmentTimestamp, txsTailHashes);
                 }
             }
 
-            return (false, txFirst.Value, txFirst.Address.Value, txLast.AttachmentTimestamp, txFirst.Hash.Value, txLast.Hash.Value);
+            return (false, txFirst.Value, txFirst.Address.Value, txLast.AttachmentTimestamp, txsTailHashes);
         }
 
         public async Task<(long Value, long Block)> GetTransactionInfo(string hash)
@@ -138,11 +143,6 @@ namespace Lykke.Service.Iota.Api.Services
             var tx = await GetTransaction(hash);
 
             return (tx.Value, tx.AttachmentTimestamp);
-        }
-
-        public async Task<ConsistencyInfo> CheckConsistency(string hash)
-        {
-            return await Run(() => _repository.CheckConsistencyAsync(new List<Hash> { new Hash(hash) }));
         }
 
         public string[] GetTransactionNonZeroAddresses(string[] trytes)
@@ -244,57 +244,98 @@ namespace Lykke.Service.Iota.Api.Services
             return (tailTx.Hash.Value, tailTx.Timestamp);
         }
 
-        public async Task Promote(string tailTxHash, int attempts = 10, int depth = 27)
+        public async Task Promote(string[] txs, int attempts = 3, int depth = 15)
         {
             var successAttempts = 0;
             var lastError = "";
+            var hashes = txs.Select(f => new Hash(f)).ToList();
+            var tx = "";
+
+            foreach (var hash in hashes)
+            {
+                var info = await Run(() => _repository.CheckConsistencyAsync(new List<Hash> { hash }));
+                if (info.State)
+                {
+                    tx = hash.Value;
+
+                    break;
+                }
+            }
+
+            if (string.IsNullOrEmpty(tx))
+            {
+                _log.WriteInfo(nameof(Promote),
+                    new { successAttempts, attempts, depth, error = "there are no consistent tx", txs },
+                    "Promotion results");
+
+                return;
+            }
 
             for (var i = 0; i < attempts; i++)
             {
                 try
                 {
-                    if (await TransactionIncluded(tailTxHash))
-                    {
-                        return;
-                    }
-
-                    var bundle = new Bundle();
-
-                    bundle.AddTransfer(new Transfer
-                    {
-                        Address = new Address(new String('9', 81)),
-                        Tag = Tag.Empty,
-                        Message = new TryteString(""),
-                        ValueToTransfer = 0
-                    });
-                    bundle.Finalize();
-                    bundle.Sign();
-
-                    var result = await Run(() => _client.ExecuteParameterizedCommandAsync<GetTransactionsToApproveResponse>(new Dictionary<string, object>
-                    {
-                        { "command", CommandType.GetTransactionsToApprove },
-                        { "depth", depth },
-                        { "reference", tailTxHash }
-                    }));
-
-                    var attachResultTrytes = await Run(() => _repository.AttachToTangleAsync(
-                        new Hash(result.BranchTransaction),
-                        new Hash(result.TrunkTransaction),
-                        bundle.Transactions));
-
-                    await _repository.BroadcastAndStoreTransactionsAsync(attachResultTrytes);
+                    await PromoteTx(tx, depth);
 
                     successAttempts++;
                 }
                 catch (Exception ex)
                 {
                     lastError = ex.Message;
+
+                    if (ex is FlurlHttpException flurlException)
+                    {
+                        if (flurlException.Message.ToLower().Contains(PromoteError_OldTransaction))
+                        {
+                            lastError = PromoteError_OldTransaction;
+                        }
+                        if (flurlException.Message.ToLower().Contains(PromoteError_Consistency))
+                        {
+                            lastError = PromoteError_Consistency;
+                        }
+                    }
+                        
+                    break;
                 }
             }
 
             _log.WriteInfo(nameof(Promote), 
-                new { successAttempts, attempts, depth, tailTxHash, lastError }, 
+                new { successAttempts, attempts, depth, error = lastError, txs }, 
                 "Promotion results");
+        }
+
+        private async Task PromoteTx(string tx, int depth)
+        {
+            var bundle = new Bundle();
+
+            bundle.AddTransfer(new Transfer
+            {
+                Address = new Address(new String('9', 81)),
+                Tag = Tag.Empty,
+                Message = new TryteString(""),
+                ValueToTransfer = 0
+            });
+            bundle.Finalize();
+            bundle.Sign();
+
+            var data = new
+            {
+                command = CommandType.GetTransactionsToApprove,
+                depth,
+                reference = tx
+            };
+
+            var result = await _nodeUrl
+                .WithHeader("X-IOTA-API-Version", 1)
+                .PostJsonAsync(data)
+                .ReceiveJson<GetTransactionsToApproveResponse>();
+
+            var attachResultTrytes = await Run(() => _repository.AttachToTangleAsync(
+                new Hash(result.BranchTransaction),
+                new Hash(result.TrunkTransaction),
+                bundle.Transactions));
+
+            await _repository.BroadcastAndStoreTransactionsAsync(attachResultTrytes);
         }
 
         private async Task<Transaction> GetTransaction(string hash)

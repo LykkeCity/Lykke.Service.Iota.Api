@@ -112,7 +112,7 @@ namespace Lykke.Service.Iota.Job.Services
                 var info = await _nodeClient.GetBundleInfo(item.Hash);
                 if (!info.Included)
                 {
-                    await _nodeClient.Promote(info.TxLast, _settings.PromoteAttempts, _settings.PromoteHeight);
+                    await _nodeClient.Promote(info.Txs, _settings.PromoteAttempts, _settings.PromoteHeight);
                 }
             }
         }
@@ -130,10 +130,12 @@ namespace Lykke.Service.Iota.Job.Services
 
                     if (!info.Included && blockTime > _settings.ReattachmentPeriod)
                     {
-                        _log.WriteInfo(nameof(ReattachBroadcasts), new { info.TxLast }, 
+                        var txLast = info.Txs.Last();
+
+                        _log.WriteInfo(nameof(ReattachBroadcasts), new { txLast }, 
                             $"Reattach transaction");
 
-                        var result = await _nodeClient.Reattach(info.TxLast);
+                        var result = await _nodeClient.Reattach(txLast);
 
                         _log.WriteInfo(nameof(ReattachBroadcasts), new { NewHash = result.Hash }, 
                             $"Reattach transaction - finished");
