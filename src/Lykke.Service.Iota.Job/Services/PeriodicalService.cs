@@ -112,7 +112,7 @@ namespace Lykke.Service.Iota.Job.Services
                 var info = await _nodeClient.GetBundleInfo(item.Hash);
                 if (!info.Included)
                 {
-                    await _nodeClient.Promote(info.TxFirst, _settings.PromoteAttempts, _settings.PromoteHeight);
+                    await _nodeClient.Promote(info.TxLast, _settings.PromoteAttempts, _settings.PromoteHeight);
                 }
             }
         }
@@ -162,7 +162,7 @@ namespace Lykke.Service.Iota.Job.Services
             virtualAddresses = virtualAddresses.Distinct().ToList();
 
             _log.WriteInfo(nameof(RefreshOperationBalances), new { virtualAddresses },
-                $"Refresh virtual addresses from brodcast");
+                $"Refresh virtual addresses from broadcast");
 
             foreach (var virtualAddress in virtualAddresses)
             {

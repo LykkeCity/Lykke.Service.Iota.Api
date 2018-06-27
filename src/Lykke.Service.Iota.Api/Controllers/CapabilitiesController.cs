@@ -11,10 +11,9 @@ namespace Lykke.Service.Iota.Api.Controllers
         {
             return new CapabilitiesResponse()
             {
-                AreManyInputsSupported = false,
-                AreManyOutputsSupported = false,
-                IsTransactionsRebuildingSupported = false,
                 CanReturnExplorerUrl = true,
+                IsAddressMappingRequired = true,
+                IsExclusiveWithdrawalsRequired = true                 
             };
         }
     }
