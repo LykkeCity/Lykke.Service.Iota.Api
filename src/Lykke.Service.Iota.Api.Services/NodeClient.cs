@@ -124,8 +124,6 @@ namespace Lykke.Service.Iota.Api.Services
             var txs = await GetTransactions(txsHashes.Hashes);
             var txsTail = txs.Where(f => f.IsTail);
             var txsTailHashes = txsTail.Select(f => f.Hash.Value).ToArray();
-            var txFirst = txsTail.Last();
-            var txLast = txsTail.First();
 
             foreach (var txTail in txsTail.OrderByDescending(f => f.AttachmentTimestamp))
             {
@@ -134,6 +132,9 @@ namespace Lykke.Service.Iota.Api.Services
                     return (true, txTail.Value, txTail.Address.Value, txTail.AttachmentTimestamp, txsTailHashes);
                 }
             }
+
+            var txFirst = txsTail.First();
+            var txLast = txsTail.Last();
 
             return (false, txFirst.Value, txFirst.Address.Value, txLast.AttachmentTimestamp, txsTailHashes);
         }
