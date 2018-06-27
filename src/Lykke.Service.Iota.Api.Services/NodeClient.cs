@@ -122,10 +122,14 @@ namespace Lykke.Service.Iota.Api.Services
             var tx = await GetTransaction(hash);
             var txsHashes = await Run(() => _repository.FindTransactionsByBundlesAsync(new List<Hash> { tx.BundleHash }));
             var txs = await GetTransactions(txsHashes.Hashes);
-            var txsTail = txs.Where(f => f.IsTail);
-            var txsTailHashes = txsTail.Select(f => f.Hash.Value).ToArray();
+            var txsTail = txs
+                .Where(f => f.IsTail)
+                .OrderBy(f => f.AttachmentTimestamp);
+            var txsTailHashes = txsTail
+                .Select(f => f.Hash.Value)
+                .ToArray();
 
-            foreach (var txTail in txsTail.OrderByDescending(f => f.AttachmentTimestamp))
+            foreach (var txTail in txsTail)
             {
                 if (await TransactionIncluded(txTail.Hash.Value))
                 {
