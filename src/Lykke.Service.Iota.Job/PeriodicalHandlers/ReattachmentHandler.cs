@@ -26,7 +26,7 @@ namespace Lykke.Service.Iota.Job.PeriodicalHandlers
         {
             try
             {
-                await _periodicalService.PromoteBroadcasts();
+                await _periodicalService.ReattachBroadcasts();
             }
             catch (Exception ex)
             {
