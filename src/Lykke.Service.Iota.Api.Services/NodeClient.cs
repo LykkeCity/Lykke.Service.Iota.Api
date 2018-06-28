@@ -259,29 +259,18 @@ namespace Lykke.Service.Iota.Api.Services
 
             foreach (var hash in hashes)
             {
-                var info = await Run(() => _repository.CheckConsistencyAsync(new List<Hash> { hash }));
-                if (info.State)
-                {
-                    tx = hash.Value;
+                tx = hash.Value;
 
-                    var result = await PromoteTx(tx, attempts, depth);
+                var result = await PromoteTx(tx, attempts, depth);
 
-                    _log.WriteInfo(nameof(Promote),
-                        new { result.successAttempts, result.error, tx},
-                        "Promotion result");
-
-                    if (result.successAttempts > 0)
-                    {
-                        return;
-                    }
-                }
-            }
-
-            if (string.IsNullOrEmpty(tx))
-            {
                 _log.WriteInfo(nameof(Promote),
-                    new { depth, error = "there are no consistent tx", txs },
-                    "Promotion results");
+                    new { result.successAttempts, result.error, tx },
+                    "Promotion result");
+
+                if (result.successAttempts > 0)
+                {
+                    return;
+                }
             }
         }
 
