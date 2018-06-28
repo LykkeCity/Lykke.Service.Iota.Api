@@ -1,4 +1,4 @@
-﻿namespace Lykke.Service.Iota.Api.Core.Shared
+﻿namespace Lykke.Service.Iota.Api.Shared
 {
     public class TransactionInput
     {

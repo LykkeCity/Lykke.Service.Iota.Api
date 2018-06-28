@@ -14,7 +14,7 @@ using Lykke.Service.BlockchainApi.Contract;
 using Lykke.Service.Iota.Api.Core.Domain;
 using Lykke.Service.Iota.Api.Core.Repositories;
 using Lykke.Service.Iota.Api.Helpers;
-using Lykke.Service.Iota.Api.Core.Shared;
+using Lykke.Service.Iota.Api.Shared;
 using Lykke.Service.Iota.Api.Core.Services;
 
 namespace Lykke.Service.Iota.Api.Controllers
@@ -86,7 +86,7 @@ namespace Lykke.Service.Iota.Api.Controllers
                 request.ToJson(), "Build transaction");
 
             var txType = request.ToAddress.StartsWith(Consts.VirtualAddressPrefix) ?
-                Core.Shared.TransactionType.Cashin : Core.Shared.TransactionType.Cashout;
+                Shared.TransactionType.Cashin : Shared.TransactionType.Cashout;
 
             var inputsValidation = await ValidateTxInputs(request, amount);
             if (inputsValidation != null)
@@ -152,11 +152,11 @@ namespace Lykke.Service.Iota.Api.Controllers
         }
 
         private async Task<BlockchainErrorResponse> ValidateTxOutputs(BuildSingleTransactionRequest request, long amount,
-            Core.Shared.TransactionType type)
+            Shared.TransactionType type)
         {
             var toAddress = request.ToAddress;
 
-            if (type == Core.Shared.TransactionType.Cashin)
+            if (type == Shared.TransactionType.Cashin)
             {
                 var toRealAddress = await _iotaService.GetRealAddress(toAddress);
 
@@ -181,7 +181,7 @@ namespace Lykke.Service.Iota.Api.Controllers
                 }
             }
 
-            if (type == Core.Shared.TransactionType.Cashout)
+            if (type == Shared.TransactionType.Cashout)
             {
                 var addressHasCashOut = await _nodeClient.HasCashOutTransaction(toAddress);
                 if (addressHasCashOut)
@@ -198,7 +198,7 @@ namespace Lykke.Service.Iota.Api.Controllers
         }
 
         private string GetTxContext(BuildSingleTransactionRequest request, long amount,
-            Core.Shared.TransactionType type)
+            Shared.TransactionType type)
         {
             return new TransactionContext
             {

@@ -1,4 +1,4 @@
-﻿using Lykke.Service.Iota.Api.Core.Shared;
+﻿using Lykke.Service.Iota.Api.Shared;
 using System.Threading.Tasks;
 
 namespace Lykke.Service.Iota.Api.Core.Services

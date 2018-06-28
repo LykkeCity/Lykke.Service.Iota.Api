@@ -8,7 +8,7 @@ using Common;
 using Tangle.Net.Utils;
 using System;
 using Newtonsoft.Json;
-using Lykke.Service.Iota.Api.Core.Shared;
+using Lykke.Service.Iota.Api.Shared;
 using Lykke.Service.Iota.Job.Settings;
 
 namespace Lykke.Service.Iota.Job.Services

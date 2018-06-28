@@ -1,6 +1,6 @@
 ﻿using Lykke.Service.Iota.Api.Core.Repositories;
 using Lykke.Service.Iota.Api.Core.Services;
-using Lykke.Service.Iota.Api.Core.Shared;
+using Lykke.Service.Iota.Api.Shared;
 using Lykke.Service.Iota.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using System;
