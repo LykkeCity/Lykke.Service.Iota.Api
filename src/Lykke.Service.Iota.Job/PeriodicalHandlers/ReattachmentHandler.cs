@@ -3,32 +3,40 @@ using System.Threading.Tasks;
 using Common;
 using Common.Log;
 using Lykke.Service.Iota.Job.Services;
+using System.Threading;
 
 namespace Lykke.Service.Iota.Job.PeriodicalHandlers
 {
-    public class ReattachmentHandler : TimerPeriod
+    public class ReattachmentHandler : IDisposable
     {
-        private ILog _log;
-        private IPeriodicalService _periodicalService;
+        private readonly TimerTrigger _timer;
+        private readonly ILog _log;
+        private readonly IPeriodicalService _periodicalService;
 
-        public ReattachmentHandler(TimeSpan period, ILog log, IPeriodicalService periodicalService) :
-            base(nameof(ReattachmentHandler), (int)period.TotalMilliseconds, log)
+        public ReattachmentHandler(TimeSpan period, ILog log, IPeriodicalService periodicalService)
         {
-            _log = log;
+            _log = log.CreateComponentScope(nameof(ReattachmentHandler));
             _periodicalService = periodicalService;
+
+            _timer = new TimerTrigger(nameof(ReattachmentHandler), period, log, Timer_Triggered);
+            _timer.Start();
         }
 
-        public override async Task Execute()
+        private async Task Timer_Triggered(ITimerTrigger timer, TimerTriggeredHandlerArgs args, CancellationToken cancellationToken)
         {
             try
             {
-                await _periodicalService.ReattachBroadcasts();
+                await _periodicalService.PromoteBroadcasts();
             }
             catch (Exception ex)
             {
-                await _log.WriteErrorAsync(nameof(ReattachmentHandler), nameof(Execute),
-                    "Failed to reattach broadcasts", ex);
+                _log.WriteError(nameof(Timer_Triggered), "Failed to reattach broadcasts", ex);
             }
         }
-    }
+
+        public void Dispose()
+        {
+            _timer?.Dispose();
+        }
+    }    
 }

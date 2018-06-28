@@ -3,22 +3,26 @@ using System.Threading.Tasks;
 using Common;
 using Common.Log;
 using Lykke.Service.Iota.Job.Services;
+using System.Threading;
 
 namespace Lykke.Service.Iota.Job.PeriodicalHandlers
 {
-    public class PromotionHandler : TimerPeriod
+    public class PromotionHandler : IDisposable
     {
-        private ILog _log;
-        private IPeriodicalService _periodicalService;
+        private readonly TimerTrigger _timer;
+        private readonly ILog _log;
+        private readonly IPeriodicalService _periodicalService;
 
-        public PromotionHandler(TimeSpan period, ILog log, IPeriodicalService periodicalService) :
-            base(nameof(BroadcastHandler), (int)period.TotalMilliseconds, log)
+        public PromotionHandler(TimeSpan period, ILog log, IPeriodicalService periodicalService)
         {
-            _log = log;
+            _log = log.CreateComponentScope(nameof(PromotionHandler));
             _periodicalService = periodicalService;
+
+            _timer = new TimerTrigger(nameof(PromotionHandler), period, log, Timer_Triggered);
+            _timer.Start();
         }
 
-        public override async Task Execute()
+        private async Task Timer_Triggered(ITimerTrigger timer, TimerTriggeredHandlerArgs args, CancellationToken cancellationToken)
         {
             try
             {
@@ -26,9 +30,13 @@ namespace Lykke.Service.Iota.Job.PeriodicalHandlers
             }
             catch (Exception ex)
             {
-                await _log.WriteErrorAsync(nameof(BroadcastHandler), nameof(Execute),
-                    "Failed to promote broadcasts", ex);
+                _log.WriteError(nameof(Timer_Triggered), "Failed to promote transactions", ex);
             }
         }
-    }
+
+        public void Dispose()
+        {
+            _timer?.Dispose();
+        }
+    }   
 }

@@ -3,22 +3,26 @@ using System.Threading.Tasks;
 using Common;
 using Common.Log;
 using Lykke.Service.Iota.Job.Services;
+using System.Threading;
 
 namespace Lykke.Service.Iota.Job.PeriodicalHandlers
 {
-    public class BalanceHandler : TimerPeriod
+    public class BalanceHandler : IDisposable
     {
-        private ILog _log;
-        private IPeriodicalService _periodicalService;
+        private readonly TimerTrigger _timer;
+        private readonly ILog _log;
+        private readonly IPeriodicalService _periodicalService;
 
-        public BalanceHandler(TimeSpan period, ILog log, IPeriodicalService periodicalService) :
-            base(nameof(BalanceHandler), (int)period.TotalMilliseconds, log)
+        public BalanceHandler(TimeSpan period, ILog log, IPeriodicalService periodicalService)
         {
-            _log = log;
+            _log = log.CreateComponentScope(nameof(BalanceHandler));
             _periodicalService = periodicalService;
+
+            _timer = new TimerTrigger(nameof(BalanceHandler), period, log, Timer_Triggered);
+            _timer.Start();
         }
 
-        public override async Task Execute()
+        private async Task Timer_Triggered(ITimerTrigger timer, TimerTriggeredHandlerArgs args, CancellationToken cancellationToken)
         {
             try
             {
@@ -26,9 +30,13 @@ namespace Lykke.Service.Iota.Job.PeriodicalHandlers
             }
             catch (Exception ex)
             {
-                await _log.WriteErrorAsync(nameof(BalanceHandler), nameof(Execute), 
-                    "Failed to update balances", ex);
+                _log.WriteError(nameof(Timer_Triggered), "Failed to update balances", ex);
             }
+        }
+
+        public void Dispose()
+        {
+            _timer?.Dispose();
         }
     }
 }

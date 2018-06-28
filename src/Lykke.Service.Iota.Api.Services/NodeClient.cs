@@ -8,7 +8,6 @@ using Lykke.Service.Iota.Api.Core.Services;
 using Tangle.Net.Entity;
 using Tangle.Net.Repository;
 using Tangle.Net.ProofOfWork;
-using Tangle.Net.Repository.DataTransfer;
 using Tangle.Net.Repository.Client;
 using Tangle.Net.Repository.Responses;
 using Common;
@@ -108,9 +107,9 @@ namespace Lykke.Service.Iota.Api.Services
             var result = await Run(() => _repository.GetLatestInclusionAsync(new List<Hash> { hashObj }));
             if (result != null)
             {
-                if (result.States.Keys.Contains(hashObj))
+                if (result.States.TryGetValue(hashObj, out var value))
                 {
-                    return result.States[hashObj];
+                    return value;
                 }
             }
 
@@ -254,7 +253,9 @@ namespace Lykke.Service.Iota.Api.Services
             var hashes = txs.Select(f => new Hash(f)).ToList();
             var tx = "";
 
-            _log.WriteInfo(nameof(Promote), new { attempts, depth, txs }, "Promote txs");
+            _log.WriteInfo(nameof(Promote),
+                new { attempts, depth, txsNumber = txs.Length, txs },
+                "Promote txs");
 
             foreach (var hash in hashes)
             {

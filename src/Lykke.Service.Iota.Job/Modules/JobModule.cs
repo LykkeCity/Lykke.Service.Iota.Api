@@ -97,25 +97,21 @@ namespace Lykke.Service.Iota.Job.Modules
                 .SingleInstance();
 
             builder.RegisterType<BalanceHandler>()
-                .As<IStartable>()
                 .AutoActivate()
                 .WithParameter("period", _settings.CurrentValue.BalanceCheckerInterval)
                 .SingleInstance();
 
             builder.RegisterType<BroadcastHandler>()
-                .As<IStartable>()
                 .AutoActivate()
                 .WithParameter("period", _settings.CurrentValue.BroadcastCheckerInterval)
                 .SingleInstance();
 
             builder.RegisterType<PromotionHandler>()
-                .As<IStartable>()
                 .AutoActivate()
                 .WithParameter("period", _settings.CurrentValue.PromotionHandlerInterval)
                 .SingleInstance();
 
             builder.RegisterType<ReattachmentHandler>()
-                .As<IStartable>()
                 .AutoActivate()
                 .WithParameter("period", _settings.CurrentValue.ReattachmentHandlerInterval)
                 .SingleInstance();            
