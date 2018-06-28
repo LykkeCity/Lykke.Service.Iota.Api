@@ -251,10 +251,10 @@ namespace Lykke.Service.Iota.Api.Services
 
         public async Task Promote(string[] txs, int attempts = 3, int depth = 15)
         {
-            var successAttempts = 0;
-            var lastError = "";
             var hashes = txs.Select(f => new Hash(f)).ToList();
             var tx = "";
+
+            _log.WriteInfo(nameof(Promote), new { attempts, depth, txs }, "Promote txs");
 
             foreach (var hash in hashes)
             {
@@ -263,18 +263,31 @@ namespace Lykke.Service.Iota.Api.Services
                 {
                     tx = hash.Value;
 
-                    break;
+                    var result = await PromoteTx(tx, attempts, depth);
+
+                    _log.WriteInfo(nameof(Promote),
+                        new { result.successAttempts, result.error, tx},
+                        "Promotion result");
+
+                    if (result.successAttempts > 0)
+                    {
+                        return;
+                    }
                 }
             }
 
             if (string.IsNullOrEmpty(tx))
             {
                 _log.WriteInfo(nameof(Promote),
-                    new { successAttempts, attempts, depth, error = "there are no consistent tx", txs },
+                    new { depth, error = "there are no consistent tx", txs },
                     "Promotion results");
-
-                return;
             }
+        }
+
+        private async Task<(int successAttempts, string error)> PromoteTx(string tx, int attempts, int depth)
+        {
+            var error = "";
+            var successAttempts = 0;
 
             for (var i = 0; i < attempts; i++)
             {
@@ -286,27 +299,23 @@ namespace Lykke.Service.Iota.Api.Services
                 }
                 catch (Exception ex)
                 {
-                    lastError = ex.Message;
+                    error = ex.Message;
 
-                    if (ex is FlurlHttpException flurlException)
+                    if (error.ToLower().Contains(PromoteError_OldTransaction))
                     {
-                        if (flurlException.Message.ToLower().Contains(PromoteError_OldTransaction))
-                        {
-                            lastError = PromoteError_OldTransaction;
-                        }
-                        if (flurlException.Message.ToLower().Contains(PromoteError_Consistency))
-                        {
-                            lastError = PromoteError_Consistency;
-                        }
+                        error = PromoteError_OldTransaction;
+                        break;
+
                     }
-                        
-                    break;
+                    if (error.ToLower().Contains(PromoteError_Consistency))
+                    {
+                        error = PromoteError_Consistency;
+                        break;
+                    }
                 }
             }
 
-            _log.WriteInfo(nameof(Promote), 
-                new { successAttempts, attempts, depth, error = lastError, tx, txs }, 
-                "Promotion results");
+            return (successAttempts, error);
         }
 
         private async Task PromoteTx(string tx, int depth)

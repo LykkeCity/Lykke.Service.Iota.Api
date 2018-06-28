@@ -615,12 +615,12 @@
 					"response": []
 				},
 				{
-					"name": "/api/transactions/broadcast/single/{operationId} - wait transaction completion (20 IOTA)",
+					"name": "/api/transactions/broadcast/single/{operationId} - wait transaction completion (5 IOTA)",
 					"event": [
 						{
 							"listen": "test",
 							"script": {
-								"id": "0ed28a45-17af-49ab-b37b-cd52275f6e68",
+								"id": "74e1fa17-b577-4a00-8b47-7dcdc4185b95",
 								"type": "text/javascript",
 								"exec": [
 									"pm.test(\"Status code is 200\", function () {",
@@ -637,7 +637,7 @@
 									"    console.info(\"current state:\" + current);",
 									"    console.info(\"Wait 60 secs\");",
 									"    setTimeout(function(){}, 60000);",
-									"    postman.setNextRequest(\"/api/transactions/broadcast/single/{operationId} - wait transaction completion (20 IOTA)\");",
+									"    postman.setNextRequest(\"/api/transactions/broadcast/single/{operationId} - wait transaction completion (5 IOTA)\");",
 									"}"
 								]
 							}
