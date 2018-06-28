@@ -4,6 +4,6 @@
     {
         string AddressVirtual { get; }
         string Address { get; }
-        long Index { get; }
+        int Index { get; }
     }
 }

@@ -7,6 +7,8 @@ using System;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
+using Lykke.Common.Chaos;
+using Common;
 
 namespace Lykke.Service.Iota.Api.Controllers
 {
@@ -18,18 +20,21 @@ namespace Lykke.Service.Iota.Api.Controllers
         private readonly IAddressInputRepository _addressInputRepository;
         private readonly IAddressVirtualRepository _addressVirtualRepository;
         private readonly IIotaService _iotaService;
+        private readonly IChaosKitty _chaosKitty;
 
         public InternalController(INodeClient nodeClient,
             IAddressRepository addressRepository, 
             IAddressInputRepository addressInputRepository,
             IAddressVirtualRepository addressVirtualRepository,
-            IIotaService iotaService)
+            IIotaService iotaService,
+            IChaosKitty chaosKitty)
         {
             _nodeClient = nodeClient;
             _addressRepository = addressRepository;
             _addressInputRepository = addressInputRepository;
             _addressVirtualRepository = addressVirtualRepository;
             _iotaService = iotaService;
+            _chaosKitty = chaosKitty;
         }
 
         /// <summary>
@@ -39,8 +44,16 @@ namespace Lykke.Service.Iota.Api.Controllers
         public async Task<IActionResult> PostVirtualAddress([Required] string address, 
             [FromBody] VirtualAddressRequest virtualAddressRequest)
         {
+            var obj = new { address, virtualAddressRequest.RealAddress, virtualAddressRequest.Index }.ToJson();
+
             await _addressRepository.SaveAsync(address, virtualAddressRequest.RealAddress, virtualAddressRequest.Index);
+
+            _chaosKitty.Meow(obj);
+
             await _addressInputRepository.SaveAsync(address, virtualAddressRequest.RealAddress, virtualAddressRequest.Index);
+
+            _chaosKitty.Meow(obj);
+
             await _addressVirtualRepository.SaveAsync(virtualAddressRequest.RealAddress, address);
 
             return Ok();

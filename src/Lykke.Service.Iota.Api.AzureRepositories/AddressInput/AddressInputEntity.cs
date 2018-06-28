@@ -18,6 +18,6 @@ namespace Lykke.Service.Iota.Api.AzureRepositories
             get => RowKey;
         }
 
-        public long Index { get; set; }
+        public int Index { get; set; }
     }
 }

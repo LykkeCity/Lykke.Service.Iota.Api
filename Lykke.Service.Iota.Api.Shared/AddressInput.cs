@@ -3,7 +3,7 @@
     public class AddressInput
     {
         public string Address { get; set; }
-        public long Index { get; set; }
+        public int Index { get; set; }
         public long Balance { get; set; }
     }
 }

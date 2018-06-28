@@ -8,7 +8,7 @@ namespace Lykke.Service.Iota.Api.Core.Repositories
     {
         Task<IEnumerable<IAddressInput>> GetAsync(string addressVirtual);
         Task<IAddressInput> GetAsync(string addressVirtual, string address);
-        Task SaveAsync(string addressVirtual, string address, long index);
+        Task SaveAsync(string addressVirtual, string address, int index);
         Task DeleteAsync(string addressVirtual, string address);
     }
 }

@@ -13,6 +13,6 @@ namespace Lykke.Service.Iota.Api.Models
 
         [DataMember]
         [Required]
-        public long Index { get; set; }
+        public int Index { get; set; }
     }
 }
