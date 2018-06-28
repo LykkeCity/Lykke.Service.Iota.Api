@@ -6,6 +6,7 @@ using Lykke.Service.Iota.Api.Core.Repositories;
 using Lykke.Service.Iota.Api.Services;
 using Lykke.Service.Iota.Api.Settings;
 using Lykke.Service.Iota.Api.AzureRepositories;
+using Lykke.Common.Chaos;
 
 namespace Lykke.Service.Iota.Api.Modules
 {
