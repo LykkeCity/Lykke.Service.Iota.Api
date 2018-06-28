@@ -1422,12 +1422,12 @@
 					"response": []
 				},
 				{
-					"name": "/api/balances - get DW real address",
+					"name": "/api/addresses/{dw-address}/underlying  - get DW real address",
 					"event": [
 						{
 							"listen": "test",
 							"script": {
-								"id": "166f7757-a39c-4d38-9795-ef11ce71b3d2",
+								"id": "7a2518ad-fbc4-4e15-a0ea-a88cb6fee107",
 								"type": "text/javascript",
 								"exec": [
 									"pm.test(\"Status code is 200\", function () {",
@@ -1437,11 +1437,11 @@
 									"var hwAddress = pm.environment.get(\"hw-address\")",
 									"",
 									"pm.test(\"Save DW real address\", function () {",
-									"    var dwRealAddress = pm.response.text();",
+									"    var jsonData = pm.response.json();",
 									"    ",
-									"    console.info(\"dw-real-address: \" + dwRealAddress);",
+									"    console.info(\"dw-real-address: \" + jsonData.underlyingAddress);",
 									"",
-									"    pm.environment.set(\"dw-real-address\", dwRealAddress);",
+									"    pm.environment.set(\"dw-real-address\", jsonData.underlyingAddress);",
 									"});"
 								]
 							}
@@ -1460,16 +1460,15 @@
 							"raw": "{\r\n  \"email\": \"andrey.krivoshapov@lykke.com\"\r\n}"
 						},
 						"url": {
-							"raw": "{{domain-api}}/api/internal/virtual-address/{{dw-address}}/real",
+							"raw": "{{domain-api}}/api/addresses/{{dw-address}}/underlying",
 							"host": [
 								"{{domain-api}}"
 							],
 							"path": [
 								"api",
-								"internal",
-								"virtual-address",
+								"addresses",
 								"{{dw-address}}",
-								"real"
+								"underlying"
 							]
 						}
 					},
@@ -1939,12 +1938,12 @@
 					"response": []
 				},
 				{
-					"name": "/api/balances - get DW real address",
+					"name": "/api/addresses/{dw-address}/underlying  - get DW real address",
 					"event": [
 						{
 							"listen": "test",
 							"script": {
-								"id": "166f7757-a39c-4d38-9795-ef11ce71b3d2",
+								"id": "7a2518ad-fbc4-4e15-a0ea-a88cb6fee107",
 								"type": "text/javascript",
 								"exec": [
 									"pm.test(\"Status code is 200\", function () {",
@@ -1954,11 +1953,11 @@
 									"var hwAddress = pm.environment.get(\"hw-address\")",
 									"",
 									"pm.test(\"Save DW real address\", function () {",
-									"    var dwRealAddress = pm.response.text();",
+									"    var jsonData = pm.response.json();",
 									"    ",
-									"    console.info(\"dw-real-address: \" + dwRealAddress);",
+									"    console.info(\"dw-real-address: \" + jsonData.underlyingAddress);",
 									"",
-									"    pm.environment.set(\"dw-real-address\", dwRealAddress);",
+									"    pm.environment.set(\"dw-real-address\", jsonData.underlyingAddress);",
 									"});"
 								]
 							}
@@ -1977,16 +1976,15 @@
 							"raw": "{\r\n  \"email\": \"andrey.krivoshapov@lykke.com\"\r\n}"
 						},
 						"url": {
-							"raw": "{{domain-api}}/api/internal/virtual-address/{{dw-address}}/real",
+							"raw": "{{domain-api}}/api/addresses/{{dw-address}}/underlying",
 							"host": [
 								"{{domain-api}}"
 							],
 							"path": [
 								"api",
-								"internal",
-								"virtual-address",
+								"addresses",
 								"{{dw-address}}",
-								"real"
+								"underlying"
 							]
 						}
 					},

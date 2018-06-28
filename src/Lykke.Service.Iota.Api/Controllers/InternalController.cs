@@ -46,21 +46,6 @@ namespace Lykke.Service.Iota.Api.Controllers
             return Ok();
         }
 
-        /// <summary>
-        /// Returns latest real address for the provided virtual Iota address
-        /// </summary>
-        [HttpGet("virtual-address/{address}/real")]
-        public async Task<IActionResult> GetVirtualAddressRealAddress([Required] string address)
-        {
-            var realAddress = await _iotaService.GetRealAddress(address);
-            if (string.IsNullOrEmpty(realAddress))
-            {
-                return NotFound();
-            }
-
-            return Ok(realAddress);
-        }
-
         [HttpGet("virtual-address/{address}/inputs")]
         public async Task<AddressInput[]> GetVirtualAddressInputs([Required] string address)
         {
