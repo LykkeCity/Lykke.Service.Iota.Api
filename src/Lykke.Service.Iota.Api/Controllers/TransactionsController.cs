@@ -115,7 +115,7 @@ namespace Lykke.Service.Iota.Api.Controllers
             var fromAddressBalance = await _iotaService.GetVirtualAddressBalance(request.FromAddress);
             if (amount > fromAddressBalance)
             {
-                return BlockchainErrorResponse.FromKnownError(BlockchainErrorCode.NotEnoughtBalance);
+                return BlockchainErrorResponse.FromKnownError(BlockchainErrorCode.NotEnoughBalance);
             }
 
             var addressInputs = await _addressInputRepository.GetAsync(request.FromAddress);
