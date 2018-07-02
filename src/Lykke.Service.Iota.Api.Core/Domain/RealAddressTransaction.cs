@@ -2,7 +2,7 @@
 
 namespace Lykke.Service.Iota.Api.Core.Domain.Address
 {
-    public class AddressTransaction
+    public class RealAddressTransaction
     {
         public string Hash { get; set; }
         public string FromAddress { get; set; }

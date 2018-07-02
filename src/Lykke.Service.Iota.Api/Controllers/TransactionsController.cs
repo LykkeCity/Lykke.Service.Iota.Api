@@ -16,7 +16,6 @@ using Lykke.Service.Iota.Api.Core.Repositories;
 using Lykke.Service.Iota.Api.Helpers;
 using Lykke.Service.Iota.Api.Shared;
 using Lykke.Service.Iota.Api.Core.Services;
-using System.Collections.Generic;
 using Lykke.Service.Iota.Api.Core.Domain.Address;
 
 namespace Lykke.Service.Iota.Api.Controllers
@@ -319,7 +318,7 @@ namespace Lykke.Service.Iota.Api.Controllers
                 return BadRequest(ModelState.ToErrorResponse());
             }
 
-            AddressTransaction[] txs = null;
+            RealAddressTransaction[] txs = null;
 
             if (address.StartsWith(Consts.VirtualAddressPrefix))
             {

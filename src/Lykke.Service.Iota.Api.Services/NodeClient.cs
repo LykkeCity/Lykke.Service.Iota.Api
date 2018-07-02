@@ -69,11 +69,11 @@ namespace Lykke.Service.Iota.Api.Services
             return false;
         }
 
-        public async Task<AddressTransaction[]> GetFromAddressTransactions(string address)
+        public async Task<RealAddressTransaction[]> GetFromAddressTransactions(string address)
         {
             try
             {
-                var addressTransactions = new List<AddressTransaction>();
+                var addressTransactions = new List<RealAddressTransaction>();
 
                 var txsHashes = await Run(() => _repository.FindTransactionsByAddressesAsync(new List<Address> { new Address(address) }));
                 var txs = await GetTransactions(txsHashes.Hashes);
@@ -102,7 +102,7 @@ namespace Lykke.Service.Iota.Api.Services
 
                         foreach (var bundleFirstAttachmentTx in bundleFirstAttachmentTxs.Where(f => f.Value > 0))
                         {
-                            addressTransactions.Add(new AddressTransaction
+                            addressTransactions.Add(new RealAddressTransaction
                             {
                                 Hash = bundleTailTx.BundleHash.Value,
                                 FromAddress = address,

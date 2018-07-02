@@ -1,15 +1,16 @@
-﻿using Common.Log;
-using Lykke.Service.Iota.Api.Core.Services;
-using Lykke.Service.Iota.Api.Core.Repositories;
+﻿using System;
 using System.Threading.Tasks;
 using System.Linq;
-using Lykke.Common.Chaos;
 using Common;
+using Common.Log;
 using Tangle.Net.Utils;
-using System;
 using Newtonsoft.Json;
+using Lykke.Common.Chaos;
+using Lykke.Service.Iota.Api.Core.Services;
+using Lykke.Service.Iota.Api.Core.Repositories;
 using Lykke.Service.Iota.Api.Shared;
 using Lykke.Service.Iota.Job.Settings;
+using Lykke.Service.Iota.Api.Core.Domain.Broadcast;
 
 namespace Lykke.Service.Iota.Job.Services
 {
@@ -22,6 +23,7 @@ namespace Lykke.Service.Iota.Job.Services
         private readonly IBalanceRepository _balanceRepository;
         private readonly IBalancePositiveRepository _balancePositiveRepository;
         private readonly IAddressInputRepository _addressInputRepository;
+        private readonly IAddressTransactionRepository _addressTransactionRepository;
         private readonly IBuildRepository _buildRepository;
         private readonly INodeClient _nodeClient;
         private readonly IIotaService _iotaService;
@@ -62,10 +64,14 @@ namespace Lykke.Service.Iota.Job.Services
                 if (bundleInfo.Included)
                 {
                     _log.WriteInfo(nameof(UpdateBroadcasts),
-                        new { item.OperationId, amount = bundleInfo.Value, bundleInfo.Block},
+                        new { item.OperationId, amount = bundleInfo.Value, bundleInfo.Block },
                         $"Brodcast update is detected");
 
                     await _broadcastRepository.SaveAsCompletedAsync(item.OperationId, bundleInfo.Value, 0, bundleInfo.Block);
+
+                    _chaosKitty.Meow(item.OperationId);
+
+                    await SaveAddressTransactions(item);
 
                     _chaosKitty.Meow(item.OperationId);
 
@@ -74,6 +80,29 @@ namespace Lykke.Service.Iota.Job.Services
                     _chaosKitty.Meow(item.OperationId);
 
                     await RefreshOperationBalances(item.OperationId);
+                }
+            }
+        }
+
+        private async Task SaveAddressTransactions(IBroadcastInProgress item)
+        {
+            var build = await _buildRepository.GetAsync(item.OperationId);
+            if (build != null)
+            {
+                var transactionContext = JsonConvert.DeserializeObject<TransactionContext>(build.TransactionContext);
+
+                var virtualAddresses = transactionContext.Inputs
+                    .Select(f => f.VirtualAddress)
+                    .ToList();
+                var outputVirtualAddresses = transactionContext.Outputs
+                    .Where(f => f.Address.StartsWith(Consts.VirtualAddressPrefix))
+                    .Select(f => f.Address);
+
+                virtualAddresses.AddRange(outputVirtualAddresses);
+
+                foreach (var virtualAddress in virtualAddresses.Distinct())
+                {
+                    await _addressTransactionRepository.SaveAsync(virtualAddress, item.Hash, build.TransactionContext, item.OperationId);
                 }
             }
         }
