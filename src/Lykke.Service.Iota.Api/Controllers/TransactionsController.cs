@@ -51,7 +51,8 @@ namespace Lykke.Service.Iota.Api.Controllers
         [ProducesResponseType(typeof(BuildTransactionResponse), (int)HttpStatusCode.OK)]
         public async Task<IActionResult> Build([Required, FromBody] BuildSingleTransactionRequest request)
         {
-            if (!ModelState.IsValid)
+            if (!ModelState.IsValid ||
+                !ModelState.IsValidAddress(request.ToAddress, nameof(request.FromAddress)))
             {
                 return BadRequest(ModelState.ToErrorResponse());
             }
@@ -59,10 +60,6 @@ namespace Lykke.Service.Iota.Api.Controllers
             {
                 return BadRequest(ErrorResponse.Create($"{nameof(request.FromAddress)} must start " +
                     $"from {Consts.VirtualAddressPrefix}"));
-            }
-            if (!_iotaService.ValidateAddress(request.ToAddress))
-            {
-                return BadRequest(ErrorResponse.Create($"{nameof(request.ToAddress)} is not a valid"));
             }
             if (request.AssetId != Asset.Miota.Id)
             {
@@ -85,8 +82,7 @@ namespace Lykke.Service.Iota.Api.Controllers
             await _log.WriteInfoAsync(nameof(TransactionsController), nameof(Build),
                 request.ToJson(), "Build transaction");
 
-            var txType = request.ToAddress.StartsWith(Consts.VirtualAddressPrefix) ?
-                Shared.TransactionType.Cashin : Shared.TransactionType.Cashout;
+            var txType = request.GetTransactionType();
 
             var inputsValidation = await ValidateTxInputs(request, amount);
             if (inputsValidation != null)
@@ -314,6 +310,35 @@ namespace Lykke.Service.Iota.Api.Controllers
             [Required, FromQuery] int take, 
             [FromQuery] string afterHash)
         {
+            if (!ModelState.IsValid ||
+                !ModelState.IsValidAddress(address) ||
+                !ModelState.IsValidTakeParameter(take))
+            {
+                return BadRequest(ModelState.ToErrorResponse());
+            }
+
+            if (address.StartsWith(Consts.VirtualAddressPrefix))
+            {
+                
+            }
+            else
+            {
+                var txs = await _nodeClient.GetFromAddressTransactions(address);
+
+                var result = txs.Select(f => new HistoricalTransactionContract
+                {
+                    Amount = f.Amount.ToString(),
+                    AssetId = Asset.Miota.Id,
+                    FromAddress = f.FromAddress,
+                    Hash = f.Hash,
+                    Timestamp = f.Timestamp,
+                    ToAddress = f.ToAddress,
+                    TransactionType = BlockchainApi.Contract.Transactions.TransactionType.Send
+                }).ToArray();
+
+                return Ok(result);
+            }
+
             await Task.Yield();
 
             return Ok();

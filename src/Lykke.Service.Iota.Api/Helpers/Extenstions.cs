@@ -1,26 +1,71 @@
-﻿using Common;
-using Lykke.Common.Api.Contract.Responses;
-using Lykke.Service.BlockchainApi.Contract;
+﻿using Lykke.Common.Api.Contract.Responses;
 using Lykke.Service.BlockchainApi.Contract.Assets;
 using Lykke.Service.BlockchainApi.Contract.Balances;
 using Lykke.Service.BlockchainApi.Contract.Transactions;
 using Lykke.Service.Iota.Api.Core.Domain;
 using Lykke.Service.Iota.Api.Core.Domain.Balance;
 using Lykke.Service.Iota.Api.Core.Domain.Broadcast;
+using Lykke.Service.Iota.Api.Shared;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.WindowsAzure.Storage.Table;
+using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
 using System.Linq;
+using Tangle.Net.Entity;
 
 namespace Lykke.Service.Iota.Api.Helpers
 {
     public static class Extenstions
     {
-        public static ErrorResponse ToErrorResponse(this ModelStateDictionary modelState)
+        public static bool IsValidAddress(this ModelStateDictionary self, string address, string propertyName = "address")
+        {
+            if (string.IsNullOrEmpty(address))
+            {
+                self.AddModelError(nameof(propertyName), $"{propertyName} is null or empty");
+
+                return false;
+            }
+
+            if (address.StartsWith(Consts.VirtualAddressPrefix))
+            {
+                return true;
+            }
+
+            try
+            {
+                var iotaAddress = new Address(address);
+
+                return true;
+            }
+            catch { }
+
+            self.AddModelError(nameof(address), $"{propertyName} is not valid");
+
+            return false;
+        }
+
+        public static Shared.TransactionType GetTransactionType(this BuildSingleTransactionRequest self)
+        {
+            return self.ToAddress.StartsWith(Consts.VirtualAddressPrefix) ? Shared.TransactionType.Cashin : Shared.TransactionType.Cashout;
+        }
+
+        public static bool IsValidTakeParameter(this ModelStateDictionary self, int take)
+        {
+            if (take <= 0)
+            {
+                self.AddModelError(nameof(take), "Must be greater than zero");
+
+                return false;
+            }
+
+            return true;
+        }
+
+        public static ErrorResponse ToErrorResponse(this ModelStateDictionary self)
         {
             var response = new ErrorResponse();
 
-            foreach (var state in modelState)
+            foreach (var state in self)
             {
                 var messages = state.Value.Errors
                     .Where(e => !string.IsNullOrWhiteSpace(e.ErrorMessage))

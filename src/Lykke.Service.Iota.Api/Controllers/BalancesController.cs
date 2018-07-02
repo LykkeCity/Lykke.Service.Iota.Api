@@ -49,13 +49,9 @@ namespace Lykke.Service.Iota.Api.Controllers
         [ProducesResponseType((int)HttpStatusCode.OK)]
         public async Task<IActionResult> AddToObservations([Required] string address)
         {
-            if (string.IsNullOrEmpty(address))
+            if (!ModelState.IsValidAddress(address))
             {
-                return BadRequest(ErrorResponse.Create($"{nameof(address)} is null or empty"));
-            }
-            if (!_iotaService.ValidateAddress(address))
-            {
-                return BadRequest(ErrorResponse.Create($"{nameof(address)} is not valid"));
+                return BadRequest(ModelState.ToErrorResponse());
             }
 
             var balance = await _balanceRepository.GetAsync(address);

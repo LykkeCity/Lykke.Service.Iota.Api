@@ -1,10 +1,12 @@
-﻿using System.Threading.Tasks;
+﻿using Lykke.Service.Iota.Api.Core.Domain.Address;
+using System.Threading.Tasks;
 
 namespace Lykke.Service.Iota.Api.Core.Services
 {
     public interface INodeClient
     {
         Task<string> GetNodeInfo();
+        Task<AddressTransaction[]> GetFromAddressTransactions(string address);
         Task<long> GetAddressBalance(string address, int threshold);
         Task<bool> HasCashOutTransaction(string address);
         Task<bool> HasPendingTransaction(string address, bool cashOutTxsOnly = false);

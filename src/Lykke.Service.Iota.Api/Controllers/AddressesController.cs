@@ -1,6 +1,7 @@
 ﻿using Lykke.Service.BlockchainApi.Contract.Addresses;
 using Lykke.Service.Iota.Api.Core.Repositories;
 using Lykke.Service.Iota.Api.Core.Services;
+using Lykke.Service.Iota.Api.Helpers;
 using Lykke.Service.Iota.Api.Settings;
 using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
@@ -37,7 +38,7 @@ namespace Lykke.Service.Iota.Api.Controllers
         {
             return Ok(new AddressValidationResponse()
             {
-                IsValid = _iotaService.ValidateAddress(address)
+                IsValid = ModelState.IsValidAddress(address)
             });
         }
 

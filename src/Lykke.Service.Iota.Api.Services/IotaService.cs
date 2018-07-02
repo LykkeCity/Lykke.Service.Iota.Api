@@ -31,24 +31,6 @@ namespace Lykke.Service.Iota.Api.Services
             _minConfirmations = minConfirmations;
         }
 
-        public bool ValidateAddress(string address)
-        {
-            if (address.StartsWith(Consts.VirtualAddressPrefix))
-            {
-                return true;
-            }
-
-            try
-            {
-                var iotaAddress = new Address(address);
-
-                return true;
-            }
-            catch { }
-
-            return false;
-        }
-
         public async Task<string> GetRealAddress(string virtualAddress)
         {
             var addressInputs = await _addressInputRepository.GetAsync(virtualAddress);
