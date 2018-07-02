@@ -248,7 +248,7 @@ namespace Lykke.Service.Iota.Api.Services
 
             _log.WriteInfo(nameof(Broadcast), tailTx.ToJson(), "Tailed tx");
 
-            return (tailTx.Hash.Value, tailTx.Timestamp, null);
+            return (tailTx.BundleHash.Value, tailTx.Timestamp, null);
         }
 
         private async Task<string> ValidateTransactions(IEnumerable<Transaction> transactions)

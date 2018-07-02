@@ -37,16 +37,6 @@ namespace Lykke.Service.Iota.Api.AzureRepositories
             });
         }
 
-        public async Task UpdateHashAsync(Guid operationId, string hash)
-        {
-            await _table.ReplaceAsync(GetPartitionKey(operationId), GetRowKey(operationId), x =>
-            {
-                x.Hash = hash;
-
-                return x;
-            });
-        }
-
         public async Task DeleteAsync(Guid operationId)
         {
             await _table.DeleteIfExistAsync(GetPartitionKey(operationId), GetRowKey(operationId));

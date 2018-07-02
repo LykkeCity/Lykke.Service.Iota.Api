@@ -9,7 +9,6 @@ namespace Lykke.Service.Iota.Api.Core.Repositories
     {
         Task AddAsync(Guid operationId, string hash);
         Task DeleteAsync(Guid operationId);
-        Task UpdateHashAsync(Guid operationId, string hash);
         Task<IEnumerable<IBroadcastInProgress>> GetAllAsync();
     }
 }

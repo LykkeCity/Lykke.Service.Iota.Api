@@ -16,6 +16,8 @@ using Lykke.Service.Iota.Api.Core.Repositories;
 using Lykke.Service.Iota.Api.Helpers;
 using Lykke.Service.Iota.Api.Shared;
 using Lykke.Service.Iota.Api.Core.Services;
+using System.Collections.Generic;
+using Lykke.Service.Iota.Api.Core.Domain.Address;
 
 namespace Lykke.Service.Iota.Api.Controllers
 {
@@ -317,31 +319,29 @@ namespace Lykke.Service.Iota.Api.Controllers
                 return BadRequest(ModelState.ToErrorResponse());
             }
 
+            AddressTransaction[] txs = null;
+
             if (address.StartsWith(Consts.VirtualAddressPrefix))
             {
                 
             }
             else
             {
-                var txs = await _nodeClient.GetFromAddressTransactions(address);
-
-                var result = txs.Select(f => new HistoricalTransactionContract
-                {
-                    Amount = f.Amount.ToString(),
-                    AssetId = Asset.Miota.Id,
-                    FromAddress = f.FromAddress,
-                    Hash = f.Hash,
-                    Timestamp = f.Timestamp,
-                    ToAddress = f.ToAddress,
-                    TransactionType = BlockchainApi.Contract.Transactions.TransactionType.Send
-                }).ToArray();
-
-                return Ok(result);
+                txs = await _nodeClient.GetFromAddressTransactions(address);
             }
 
-            await Task.Yield();
+            var list = txs.Select(f => new HistoricalTransactionContract
+            {
+                Amount = f.Amount.ToString(),
+                AssetId = Asset.Miota.Id,
+                FromAddress = f.FromAddress,
+                Hash = f.Hash,
+                Timestamp = f.Timestamp,
+                ToAddress = f.ToAddress,
+                TransactionType = BlockchainApi.Contract.Transactions.TransactionType.Send
+            }).ToArray();
 
-            return Ok();
+            return Ok(list);
         }
     }
 }
