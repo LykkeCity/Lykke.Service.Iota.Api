@@ -7,6 +7,7 @@ namespace Lykke.Service.Iota.Api.Core.Services
     {
         Task<string> GetNodeInfo();
         Task<RealAddressTransaction[]> GetFromAddressTransactions(string address);
+        Task<RealAddressTransaction[]> GetToAddressTransactions(string address);
         Task<long> GetAddressBalance(string address, int threshold);
         Task<bool> HasCashOutTransaction(string address);
         Task<bool> HasPendingTransaction(string address, bool cashOutTxsOnly = false);

@@ -92,24 +92,30 @@ namespace Lykke.Service.Iota.Api.Services
                     if (bundleTxsHashes != null && bundleTxsHashes.Hashes != null)
                     {
                         var bundleTxs = await GetTransactions(bundleTxsHashes.Hashes);
-                        var bundleFirstAttachmentTxs = bundleTxs
-                            .GroupBy(f => f.CurrentIndex)
-                            .Select(f => f.OrderBy(x => x.AttachmentTimestamp).First())
-                            .OrderBy(f => f.CurrentIndex);
-                        var bundleTailTx = bundleFirstAttachmentTxs
-                            .Where(f => f.IsTail)
-                            .First();
-
-                        foreach (var bundleFirstAttachmentTx in bundleFirstAttachmentTxs.Where(f => f.Value > 0))
+                        if (await BundleIncluded(bundleTxs))
                         {
-                            addressTransactions.Add(new RealAddressTransaction
+                            var bundleFirstAttachmentTxs = bundleTxs
+                                .GroupBy(f => f.CurrentIndex)
+                                .Select(f => f.OrderBy(x => x.AttachmentTimestamp).First())
+                                .OrderBy(f => f.CurrentIndex);
+                            var bundleFirstAttachmentTailTx = bundleFirstAttachmentTxs
+                                .Where(f => f.IsTail)
+                                .FirstOrDefault();
+
+                            if (bundleFirstAttachmentTailTx != null)
                             {
-                                Hash = bundleTailTx.BundleHash.Value,
-                                FromAddress = address,
-                                ToAddress = bundleFirstAttachmentTx.Address.Value,
-                                Amount = bundleFirstAttachmentTx.Value,
-                                Timestamp = DateTimeOffset.FromUnixTimeMilliseconds(bundleFirstAttachmentTx.Timestamp).UtcDateTime
-                            });
+                                foreach (var bundleFirstAttachmentTx in bundleFirstAttachmentTxs.Where(f => f.Value > 0))
+                                {
+                                    addressTransactions.Add(new RealAddressTransaction
+                                    {
+                                        Hash = bundleFirstAttachmentTailTx.BundleHash.Value,
+                                        FromAddress = address,
+                                        ToAddress = bundleFirstAttachmentTx.Address.Value,
+                                        Amount = bundleFirstAttachmentTx.Value,
+                                        Timestamp = DateTimeOffset.FromUnixTimeMilliseconds(bundleFirstAttachmentTx.Timestamp).UtcDateTime
+                                    });
+                                }
+                            }
                         }
                     }
                 }
@@ -120,6 +126,92 @@ namespace Lykke.Service.Iota.Api.Services
             {
                 throw new Exception($"Failed to get transactions for address={address}", ex);
             }
+        }
+
+        public async Task<RealAddressTransaction[]> GetToAddressTransactions(string address)
+        {
+            try
+            {
+                var addressTransactions = new List<RealAddressTransaction>();
+                var addressObj = new Address(address);
+
+                var txsHashes = await Run(() => _repository.FindTransactionsByAddressesAsync(new List<Address> { addressObj }));
+                var txs = await GetTransactions(txsHashes.Hashes);
+
+                var toAddressTxs = txs
+                    .Where(f => f.Value > 0)
+                    .OrderBy(f => f.AttachmentTimestamp)
+                    .ToList();
+                var bundleHashes = toAddressTxs
+                    .Select(f => f.BundleHash.Value)
+                    .Distinct();
+
+                foreach (var bundleHash in bundleHashes)
+                {
+                    var bundleTxsHashes = await Run(() => _repository.FindTransactionsByBundlesAsync(new List<Hash> { new Hash(bundleHash) }));
+                    if (bundleTxsHashes != null && bundleTxsHashes.Hashes != null)
+                    {
+                        var bundleTxs = await GetTransactions(bundleTxsHashes.Hashes);
+                        if (await BundleIncluded(bundleTxs))
+                        {
+                            var bundleFirstAttachmentTxs = bundleTxs
+                                .GroupBy(f => f.CurrentIndex)
+                                .Select(f => f.OrderBy(x => x.AttachmentTimestamp).First())
+                                .OrderBy(f => f.CurrentIndex);
+                            var bundleFirstAttachmentTailTx = bundleFirstAttachmentTxs
+                                .Where(f => f.IsTail)
+                                .FirstOrDefault();
+                            var bundleFirstAttachmentFromTx = bundleFirstAttachmentTxs
+                                .Where(f => f.Value < 0)
+                                .FirstOrDefault();
+
+                            if (bundleFirstAttachmentTailTx != null && bundleFirstAttachmentFromTx != null)
+                            {
+                                var toAddressBundleTxs = bundleFirstAttachmentTxs
+                                    .Where(f => f.Value > 0 && f.Address.Value == addressObj.Value);
+
+                                foreach (var toAddressBundleTx in toAddressBundleTxs)
+                                {
+                                    addressTransactions.Add(new RealAddressTransaction
+                                    {
+                                        Hash = bundleFirstAttachmentTailTx.BundleHash.Value,
+                                        FromAddress = bundleFirstAttachmentFromTx.Address.Value,
+                                        ToAddress = toAddressBundleTx.Address.Value,
+                                        Amount = toAddressBundleTx.Value,
+                                        Timestamp = DateTimeOffset.FromUnixTimeMilliseconds(toAddressBundleTx.Timestamp).UtcDateTime
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+
+                return addressTransactions.ToArray();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Failed to get transactions for address={address}", ex);
+            }
+        }
+
+        private async Task<bool> BundleIncluded(List<Transaction> txs)
+        {
+            var txsTail = txs
+                .Where(f => f.IsTail)
+                .OrderBy(f => f.AttachmentTimestamp);
+            var txsTailHashes = txsTail
+                .Select(f => f.Hash.Value)
+                .ToArray();
+
+            foreach (var txTail in txsTail)
+            {
+                if (await TransactionIncluded(txTail.Hash.Value))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         public async Task<long> GetAddressBalance(string address, int threshold)

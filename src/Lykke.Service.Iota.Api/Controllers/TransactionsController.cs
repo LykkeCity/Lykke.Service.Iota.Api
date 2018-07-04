@@ -329,7 +329,40 @@ namespace Lykke.Service.Iota.Api.Controllers
                 txs = await _nodeClient.GetFromAddressTransactions(address);
             }
 
-            var list = txs.Select(f => new HistoricalTransactionContract
+            return Ok(GetHistoricalTxs(txs, BlockchainApi.Contract.Transactions.TransactionType.Send));
+        }
+
+        [HttpGet("history/to/{address}")]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(HistoricalTransactionContract[]))]
+        public async Task<IActionResult> GetHistoryToAddress([Required] string address,
+            [Required, FromQuery] int take,
+            [FromQuery] string afterHash)
+        {
+            if (!ModelState.IsValid ||
+                !ModelState.IsValidAddress(address) ||
+                !ModelState.IsValidTakeParameter(take))
+            {
+                return BadRequest(ModelState.ToErrorResponse());
+            }
+
+            RealAddressTransaction[] txs = null;
+
+            if (address.StartsWith(Consts.VirtualAddressPrefix))
+            {
+
+            }
+            else
+            {
+                txs = await _nodeClient.GetToAddressTransactions(address);
+            }
+
+            return Ok(GetHistoricalTxs(txs, BlockchainApi.Contract.Transactions.TransactionType.Receive));
+        }
+
+        private static HistoricalTransactionContract[] GetHistoricalTxs(RealAddressTransaction[] txs,
+            BlockchainApi.Contract.Transactions.TransactionType transactionType)
+        {
+            return txs.Select(f => new HistoricalTransactionContract
             {
                 Amount = f.Amount.ToString(),
                 AssetId = Asset.Miota.Id,
@@ -337,10 +370,8 @@ namespace Lykke.Service.Iota.Api.Controllers
                 Hash = f.Hash,
                 Timestamp = f.Timestamp,
                 ToAddress = f.ToAddress,
-                TransactionType = BlockchainApi.Contract.Transactions.TransactionType.Send
+                TransactionType = transactionType
             }).ToArray();
-
-            return Ok(list);
         }
     }
 }
