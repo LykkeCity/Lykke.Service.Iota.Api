@@ -401,7 +401,7 @@ namespace Lykke.Service.Iota.Api.Services
 
         public async Task<(string Hash, long Block)> Reattach(string tailTxHash)
         {
-            var txsTrities = await Run(() => _repository.ReplayBundleAsync(new Hash(tailTxHash)));
+            var txsTrities = await _repository.ReplayBundleAsync(new Hash(tailTxHash));
             var txsBroadcasted = txsTrities.Select(f => Transaction.FromTrytes(f)).ToList();
             var tailTx = txsBroadcasted.Where(f => f.IsTail).First();
 
@@ -494,10 +494,10 @@ namespace Lykke.Service.Iota.Api.Services
                 .PostJsonAsync(data)
                 .ReceiveJson<GetTransactionsToApproveResponse>();
 
-            var attachResultTrytes = await Run(() => _repository.AttachToTangleAsync(
+            var attachResultTrytes = await _repository.AttachToTangleAsync(
                 new Hash(result.BranchTransaction),
                 new Hash(result.TrunkTransaction),
-                bundle.Transactions));
+                bundle.Transactions);
 
             await _repository.BroadcastAndStoreTransactionsAsync(attachResultTrytes);
         }
