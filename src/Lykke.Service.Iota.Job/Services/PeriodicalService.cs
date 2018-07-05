@@ -36,6 +36,7 @@ namespace Lykke.Service.Iota.Job.Services
             IBalanceRepository balanceRepository,
             IBalancePositiveRepository balancePositiveRepository,
             IAddressInputRepository addressInputRepository,
+            IAddressTransactionRepository addressTransactionRepository,
             IBuildRepository buildRepository,
             INodeClient nodeClient,
             IIotaService iotaService,
@@ -48,6 +49,7 @@ namespace Lykke.Service.Iota.Job.Services
             _balanceRepository = balanceRepository;
             _balancePositiveRepository = balancePositiveRepository;
             _addressInputRepository = addressInputRepository;
+            _addressTransactionRepository = addressTransactionRepository;
             _buildRepository = buildRepository;
             _nodeClient = nodeClient;
             _iotaService = iotaService;

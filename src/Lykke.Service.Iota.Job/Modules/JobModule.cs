@@ -62,6 +62,11 @@ namespace Lykke.Service.Iota.Job.Modules
                 .WithParameter(TypedParameter.From(connectionStringManager))
                 .SingleInstance();
 
+            builder.RegisterType<AddressTransactionRepository>()
+                .As<IAddressTransactionRepository>()
+                .WithParameter(TypedParameter.From(connectionStringManager))
+                .SingleInstance();            
+
             builder.RegisterType<BroadcastRepository>()
                 .As<IBroadcastRepository>()
                 .WithParameter(TypedParameter.From(connectionStringManager))
