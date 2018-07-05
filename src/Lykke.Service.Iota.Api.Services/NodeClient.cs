@@ -204,18 +204,10 @@ namespace Lykke.Service.Iota.Api.Services
                 .Where(f => f.IsTail)
                 .OrderBy(f => f.AttachmentTimestamp);
             var txsTailHashes = txsTail
-                .Select(f => f.Hash.Value)
-                .ToArray();
+                .Select(f => f.Hash)
+                .ToList();
 
-            foreach (var txTail in txsTail)
-            {
-                if (await TransactionIncluded(txTail.Hash.Value))
-                {
-                    return true;
-                }
-            }
-
-            return false;
+            return await HasIncludedTransactions(txsTailHashes);
         }
 
         public async Task<long> GetAddressBalance(string address, int threshold)
@@ -237,17 +229,6 @@ namespace Lykke.Service.Iota.Api.Services
             var response = await Run(() => _repository.WereAddressesSpentFromAsync(new List<Address> { new Address(address) }));
 
             return response.First().SpentFrom;
-        }
-
-        public async Task<string[]> GetBundleAddresses(string tailTxHash)
-        {
-            var bundle = await Run(() => _repository.GetBundleAsync(new Hash(tailTxHash)));
-
-            return bundle.Transactions
-                .Where(f => f.Value != 0)
-                .Select(f => f.Address.Value)
-                .Distinct()
-                .ToArray();
         }
 
         public async Task<bool> TransactionIncluded(string hash)
