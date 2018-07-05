@@ -382,8 +382,22 @@ namespace Lykke.Service.Iota.Api.Services
 
         public async Task<(string Hash, long Block)> Reattach(string tailTxHash)
         {
-            var txsTrities = await _repository.ReplayBundleAsync(new Hash(tailTxHash));
-            var txsBroadcasted = txsTrities.Select(f => Transaction.FromTrytes(f)).ToList();
+            var depth = 8;
+            var minWeightMagnitude = 14;
+            var bundle = await _repository.GetBundleAsync(new Hash(tailTxHash));
+
+            var txsToApprove = await GetTransactionsToApprove(depth);
+
+            var attachResultTrytes = await _repository.AttachToTangleAsync(
+                new Hash(txsToApprove.BranchTransaction),
+                new Hash(txsToApprove.TrunkTransaction),
+                bundle.Transactions,
+                minWeightMagnitude);
+
+            await BroadcastTransactionsAsync(attachResultTrytes);
+            await StoreTransactionsAsync(attachResultTrytes);
+
+            var txsBroadcasted = attachResultTrytes.Select(f => Transaction.FromTrytes(f)).ToList();
             var tailTx = txsBroadcasted.Where(f => f.IsTail).First();
 
             return (tailTx.Hash.Value, tailTx.Timestamp);
@@ -427,7 +441,26 @@ namespace Lykke.Service.Iota.Api.Services
             {
                 try
                 {
-                    await PromoteTx(tx, depth);
+                    var bundle = new Bundle();
+
+                    bundle.AddTransfer(new Transfer
+                    {
+                        Address = new Address(new String('9', 81)),
+                        Tag = Tag.Empty,
+                        Message = new TryteString(""),
+                        ValueToTransfer = 0
+                    });
+                    bundle.Finalize();
+                    bundle.Sign();
+
+                    var txsToApprove = await GetTransactionsToApprove(depth, tx);
+
+                    var attachResultTrytes = await _repository.AttachToTangleAsync(
+                        new Hash(txsToApprove.BranchTransaction),
+                        new Hash(txsToApprove.TrunkTransaction),
+                        bundle.Transactions);
+
+                    await BroadcastTransactionsAsync(attachResultTrytes);
 
                     successAttempts++;
                 }
@@ -451,38 +484,59 @@ namespace Lykke.Service.Iota.Api.Services
             return (successAttempts, error);
         }
 
-        private async Task PromoteTx(string tx, int depth)
+        private async Task<GetTransactionsToApproveResponse> GetTransactionsToApprove(int depth)
         {
-            var bundle = new Bundle();
-
-            bundle.AddTransfer(new Transfer
+            var data = new
             {
-                Address = new Address(new String('9', 81)),
-                Tag = Tag.Empty,
-                Message = new TryteString(""),
-                ValueToTransfer = 0
-            });
-            bundle.Finalize();
-            bundle.Sign();
+                command = CommandType.GetTransactionsToApprove,
+                depth
+            };
 
+            return await _nodeUrl
+                .WithHeader("X-IOTA-API-Version", "1.5")
+                .PostJsonAsync(data)
+                .ReceiveJson<GetTransactionsToApproveResponse>();
+        }
+
+        private async Task<GetTransactionsToApproveResponse> GetTransactionsToApprove(int depth, string reference)
+        {
             var data = new
             {
                 command = CommandType.GetTransactionsToApprove,
                 depth,
-                reference = tx
+                reference
+            };
+
+            return await _nodeUrl
+                .WithHeader("X-IOTA-API-Version", "1.5")
+                .PostJsonAsync(data)
+                .ReceiveJson<GetTransactionsToApproveResponse>();
+        }
+
+        private async Task BroadcastTransactionsAsync(List<TransactionTrytes> transactions)
+        {
+            var data = new
+            {
+                command = CommandType.BroadcastTransactions,
+                trytes = transactions.Select(t => t.Value).ToList()
             };
 
             var result = await _nodeUrl
                 .WithHeader("X-IOTA-API-Version", "1.5")
-                .PostJsonAsync(data)
-                .ReceiveJson<GetTransactionsToApproveResponse>();
+                .PostJsonAsync(data);
+        }
 
-            var attachResultTrytes = await _repository.AttachToTangleAsync(
-                new Hash(result.BranchTransaction),
-                new Hash(result.TrunkTransaction),
-                bundle.Transactions);
+        private async Task StoreTransactionsAsync(List<TransactionTrytes> transactions)
+        {
+            var data = new
+            {
+                command = CommandType.StoreTransactions,
+                trytes = transactions.Select(t => t.Value).ToList()
+            };
 
-            await _repository.BroadcastAndStoreTransactionsAsync(attachResultTrytes);
+            var result = await _nodeUrl
+                .WithHeader("X-IOTA-API-Version", "1.5")
+                .PostJsonAsync(data);
         }
 
         private async Task<Transaction> GetTransaction(string hash)
