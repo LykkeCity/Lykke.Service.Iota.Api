@@ -279,8 +279,7 @@ namespace Lykke.Service.Iota.Api.Services
 
         public async Task<(bool Included, long Value, string Address, long Block, string[] Txs)> GetBundleInfo(string hash)
         {
-            var tx = await GetTransaction(hash);
-            var txsHashes = await Run(() => _repository.FindTransactionsByBundlesAsync(new List<Hash> { tx.BundleHash }));
+            var txsHashes = await Run(() => _repository.FindTransactionsByBundlesAsync(new List<Hash> { new Hash(hash) }));
             var txs = await GetTransactions(txsHashes.Hashes);
             var txsTail = txs
                 .Where(f => f.IsTail)
