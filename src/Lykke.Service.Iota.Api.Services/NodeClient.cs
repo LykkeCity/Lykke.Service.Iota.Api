@@ -410,11 +410,14 @@ namespace Lykke.Service.Iota.Api.Services
 
         public async Task Promote(string[] txs, int attempts = 3, int depth = 15)
         {
-            var hashes = txs.Select(f => new Hash(f)).ToList();
             var tx = "";
+            var hashes = txs
+                .Reverse()
+                .Select(f => new Hash(f))
+                .ToList();
 
             _log.WriteInfo(nameof(Promote),
-                new { attempts, depth, txsNumber = txs.Length, txs },
+                new { attempts, depth, txsNumber = txs.Length },
                 "Promote txs");
 
             foreach (var hash in hashes)
@@ -427,7 +430,7 @@ namespace Lykke.Service.Iota.Api.Services
                     new { result.successAttempts, result.error, tx },
                     "Promotion result");
 
-                if (result.successAttempts > 0)
+                if (result.successAttempts > 0 || result.error == PromoteError_OldTransaction)
                 {
                     return;
                 }
@@ -455,7 +458,6 @@ namespace Lykke.Service.Iota.Api.Services
                     {
                         error = PromoteError_OldTransaction;
                         break;
-
                     }
                     if (error.ToLower().Contains(PromoteError_Consistency))
                     {
