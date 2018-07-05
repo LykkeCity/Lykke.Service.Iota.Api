@@ -47,22 +47,26 @@ namespace Lykke.Service.Iota.Api.Services
             var txsHashes = await Run(() => _repository.FindTransactionsByAddressesAsync(new List<Address> { new Address(address) }));
             var txs = await GetTransactions(txsHashes.Hashes);
 
-            var nonZeroTx = txs.Where(f => f.Value < 0).ToList();
+            var nonZeroTxs = txs.Where(f => f.Value < 0).ToList();
             if (!cashOutTxsOnly)
             {
-                nonZeroTx.AddRange(txs.Where(f => f.Value > 0).ToList());
+                nonZeroTxs.AddRange(txs.Where(f => f.Value > 0).ToList());
             }
 
-            var nonZeroTxHashes = txs.OrderByDescending(f => f.AttachmentTimestamp)
-                .Select(f => f.Hash.Value)
+            var bundleHashes = nonZeroTxs
+                .OrderBy(f => f.AttachmentTimestamp)
+                .Select(f => f.BundleHash.Value)
                 .Distinct();
 
-            foreach (var nonZeroTxHash in nonZeroTxHashes)
+            foreach (var bundleHash in bundleHashes)
             {
-                var bundleInfo = await GetBundleInfo(nonZeroTxHash);
-                if (!bundleInfo.Included)
+                var bundleTxsHashes = await Run(() => _repository.FindTransactionsByBundlesAsync(new List<Hash> { new Hash(bundleHash) }));
+                if (bundleTxsHashes != null && bundleTxsHashes.Hashes != null)
                 {
-                    return true;
+                    if (!(await HasIncludedTransactions(bundleTxsHashes.Hashes)))
+                    {
+                        return true;
+                    }
                 }
             }
 
@@ -257,6 +261,17 @@ namespace Lykke.Service.Iota.Api.Services
                 {
                     return value;
                 }
+            }
+
+            return false;
+        }
+
+        private async Task<bool> HasIncludedTransactions(List<Hash> hashes)
+        {
+            var result = await Run(() => _repository.GetLatestInclusionAsync(hashes));
+            if (result != null)
+            {
+                return result.States.Any(f => f.Value);
             }
 
             return false;
