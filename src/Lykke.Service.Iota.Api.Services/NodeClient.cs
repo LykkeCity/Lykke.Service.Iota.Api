@@ -492,7 +492,7 @@ namespace Lykke.Service.Iota.Api.Services
             };
 
             var result = await _nodeUrl
-                .WithHeader("X-IOTA-API-Version", 1)
+                .WithHeader("X-IOTA-API-Version", "1.5")
                 .PostJsonAsync(data)
                 .ReceiveJson<GetTransactionsToApproveResponse>();
 
