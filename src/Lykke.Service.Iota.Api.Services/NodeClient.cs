@@ -22,6 +22,7 @@ namespace Lykke.Service.Iota.Api.Services
         private const string PromoteErrorConsistency = "entry point failed consistency check";
         private const string NodeHeaderName = "X-IOTA-API-Version";
         private const string NodeHeaderValue = "1.5";
+        private const int NodeTimeout = 30;
         private const int NodeDepth = 8;
         private const int NodeMinWeightMagnitude = 14;
 
@@ -519,6 +520,7 @@ namespace Lykke.Service.Iota.Api.Services
 
             return await _nodeUrl
                 .WithHeader(NodeHeaderName, NodeHeaderValue)
+                .WithTimeout(NodeTimeout)
                 .PostJsonAsync(data)
                 .ReceiveJson<GetTransactionsToApproveResponse>();
         }
@@ -534,6 +536,7 @@ namespace Lykke.Service.Iota.Api.Services
 
             return await _nodeUrl
                 .WithHeader(NodeHeaderName, NodeHeaderValue)
+                .WithTimeout(NodeTimeout)
                 .PostJsonAsync(data)
                 .ReceiveJson<GetTransactionsToApproveResponse>();
         }
@@ -548,6 +551,7 @@ namespace Lykke.Service.Iota.Api.Services
 
             var result = await _nodeUrl
                 .WithHeader(NodeHeaderName, NodeHeaderValue)
+                .WithTimeout(NodeTimeout)
                 .PostJsonAsync(data);
         }
 
@@ -561,6 +565,7 @@ namespace Lykke.Service.Iota.Api.Services
 
             var result = await _nodeUrl
                 .WithHeader(NodeHeaderName, NodeHeaderValue)
+                .WithTimeout(NodeTimeout)
                 .PostJsonAsync(data);
         }
     }

@@ -17,6 +17,7 @@ using Lykke.Service.Iota.Api.Helpers;
 using Lykke.Service.Iota.Api.Shared;
 using Lykke.Service.Iota.Api.Core.Services;
 using Lykke.Service.Iota.Api.Core.Domain.Address;
+using System.Collections.Generic;
 
 namespace Lykke.Service.Iota.Api.Controllers
 {
@@ -28,6 +29,7 @@ namespace Lykke.Service.Iota.Api.Controllers
         private readonly IAddressInputRepository _addressInputRepository;
         private readonly IBroadcastRepository _broadcastRepository;
         private readonly IBroadcastInProgressRepository _broadcastInProgressRepository;
+        private readonly IAddressTransactionRepository _addressTransactionRepository;
         private readonly INodeClient _nodeClient;
         private readonly IIotaService _iotaService;
 
@@ -36,6 +38,7 @@ namespace Lykke.Service.Iota.Api.Controllers
             IAddressInputRepository addressInputRepository,
             IBroadcastRepository broadcastRepository,
             IBroadcastInProgressRepository broadcastInProgressRepository,
+            IAddressTransactionRepository addressTransactionRepository,
             INodeClient nodeClient,
             IIotaService iotaService)
         {
@@ -44,6 +47,7 @@ namespace Lykke.Service.Iota.Api.Controllers
             _addressInputRepository = addressInputRepository;
             _broadcastRepository = broadcastRepository;
             _broadcastInProgressRepository = broadcastInProgressRepository;
+            _addressTransactionRepository = addressTransactionRepository;
             _nodeClient = nodeClient;
             _iotaService = iotaService;
         }
@@ -318,15 +322,22 @@ namespace Lykke.Service.Iota.Api.Controllers
                 return BadRequest(ModelState.ToErrorResponse());
             }
 
-            RealAddressTransaction[] txs = null;
+            var txs = new List<RealAddressTransaction>();
 
             if (address.StartsWith(Consts.VirtualAddressPrefix))
             {
-                
+                //_addressTransactionRepository.GetAsync(address, take, continuation);
             }
             else
             {
-                txs = await _nodeClient.GetFromAddressTransactions(address);
+                var txsAll = await _nodeClient.GetFromAddressTransactions(address);
+
+                txs = txsAll
+                    .Reverse()
+                    .TakeWhile(f => f.Hash == afterHash)
+                    .Take(take)
+                    .Reverse()
+                    .ToList();
             }
 
             return Ok(GetHistoricalTxs(txs, BlockchainApi.Contract.Transactions.TransactionType.Send));
@@ -345,7 +356,7 @@ namespace Lykke.Service.Iota.Api.Controllers
                 return BadRequest(ModelState.ToErrorResponse());
             }
 
-            RealAddressTransaction[] txs = null;
+            var txs = new List<RealAddressTransaction>();
 
             if (address.StartsWith(Consts.VirtualAddressPrefix))
             {
@@ -353,13 +364,20 @@ namespace Lykke.Service.Iota.Api.Controllers
             }
             else
             {
-                txs = await _nodeClient.GetToAddressTransactions(address);
+                var txsAll = await _nodeClient.GetToAddressTransactions(address);
+
+                txs = txsAll
+                    .Reverse()
+                    .TakeWhile(f => f.Hash == afterHash)
+                    .Take(take)
+                    .Reverse()
+                    .ToList();
             }
 
             return Ok(GetHistoricalTxs(txs, BlockchainApi.Contract.Transactions.TransactionType.Receive));
         }
 
-        private static HistoricalTransactionContract[] GetHistoricalTxs(RealAddressTransaction[] txs,
+        private static HistoricalTransactionContract[] GetHistoricalTxs(List<RealAddressTransaction> txs,
             BlockchainApi.Contract.Transactions.TransactionType transactionType)
         {
             return txs.Select(f => new HistoricalTransactionContract

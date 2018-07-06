@@ -15,6 +15,7 @@ namespace Lykke.Service.Iota.Api.AzureRepositories
         private INoSQLTableStorage<AddressTransactionEntity> _table;
         private static string GetPartitionKey(string addressVirtual) => addressVirtual;
         private static string GetRowKey(string hash) => hash;
+        //private static string GetRowKey() => DateTime.UtcNow.ToString("o");
 
         public AddressTransactionRepository(IReloadingManager<string> connectionStringManager, ILog log)
         {
