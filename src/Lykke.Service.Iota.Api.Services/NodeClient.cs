@@ -309,12 +309,12 @@ namespace Lykke.Service.Iota.Api.Services
             var transactions = trytes.Select(f => Transaction.FromTrytes(new TransactionTrytes(f)));
 
             _log.WriteInfo(nameof(Broadcast), "", "Get transactions to approve");
-            var transactionsToApprove = await _repository.GetTransactionsToApproveAsync(depth);
+            var txsToApprove = await GetTransactionsToApprove(depth);
 
             _log.WriteInfo(nameof(Broadcast), "", "Attach to tangle");
             var attachResultTrytes = await _repository.AttachToTangleAsync(
-                transactionsToApprove.BranchTransaction,
-                transactionsToApprove.TrunkTransaction,
+                new Hash(txsToApprove.BranchTransaction),
+                new Hash(txsToApprove.TrunkTransaction),
                 transactions,
                 minWeightMagnitude);
 
@@ -324,8 +324,11 @@ namespace Lykke.Service.Iota.Api.Services
                 return (null, null, error);
             }
 
-            _log.WriteInfo(nameof(Broadcast), "", "Broadcast and store transactions");
-            await _repository.BroadcastAndStoreTransactionsAsync(attachResultTrytes);
+            _log.WriteInfo(nameof(Broadcast), "", "Broadcast transactions");
+            await BroadcastTransactionsAsync(attachResultTrytes);
+
+            _log.WriteInfo(nameof(Broadcast), "", "Store transactions");
+            await StoreTransactionsAsync(attachResultTrytes);
 
             _log.WriteInfo(nameof(Broadcast), "", "Get broadcated txs");
             var txsBroadcasted = attachResultTrytes.Select(f => Transaction.FromTrytes(f)).ToList();
