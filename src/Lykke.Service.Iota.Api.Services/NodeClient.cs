@@ -8,7 +8,6 @@ using Lykke.Service.Iota.Api.Core.Services;
 using Tangle.Net.Entity;
 using Tangle.Net.Repository;
 using Tangle.Net.ProofOfWork;
-using Tangle.Net.Repository.Client;
 using Tangle.Net.Repository.Responses;
 using Common;
 using Lykke.Service.Iota.Api.Services.Helpers;
@@ -19,8 +18,12 @@ namespace Lykke.Service.Iota.Api.Services
 {
     public class NodeClient : INodeClient
     {
-        private const string PromoteError_OldTransaction = "transaction is too old";
-        private const string PromoteError_Consistency = "entry point failed consistency check";
+        private const string PromoteErrorOldTransaction = "transaction is too old";
+        private const string PromoteErrorConsistency = "entry point failed consistency check";
+        private const string NodeHeaderName = "X-IOTA-API-Version";
+        private const string NodeHeaderValue = "1.5";
+        private const int NodeDepth = 8;
+        private const int NodeMinWeightMagnitude = 14;
 
         private readonly ILog _log;
         private readonly RestIotaRepository _repository;
@@ -28,18 +31,19 @@ namespace Lykke.Service.Iota.Api.Services
 
         public NodeClient(ILog log, string nodeUrl)
         {
-            var restClient = new RestClient(nodeUrl);
+            var restClient = new RestClient(nodeUrl)
+            {
+                Timeout = 30000
+            };
 
             _log = log.CreateComponentScope(nameof(NodeClient));
             _repository = new RestIotaRepository(restClient, new PoWService(new CpuPearlDiver()));
             _nodeUrl = nodeUrl;
         }
 
-        public async Task<string> GetNodeInfo()
+        public async Task<object> GetNodeInfo()
         {
-            var response = await Run(() => _repository.GetNodeInfoAsync());
-
-            return response.ToJson();
+            return await Run(() => _repository.GetNodeInfoAsync());
         }
 
         public async Task<bool> HasPendingTransaction(string address, bool cashOutTxsOnly = false)
@@ -302,21 +306,18 @@ namespace Lykke.Service.Iota.Api.Services
 
         public async Task<(string Hash, long? Block, string Error)> Broadcast(string[] trytes)
         {
-            var depth = 8;
-            var minWeightMagnitude = 14;
-
             _log.WriteInfo(nameof(Broadcast), "", "Get txs from trytes");
             var transactions = trytes.Select(f => Transaction.FromTrytes(new TransactionTrytes(f)));
 
             _log.WriteInfo(nameof(Broadcast), "", "Get transactions to approve");
-            var txsToApprove = await GetTransactionsToApprove(depth);
+            var txsToApprove = await GetTransactionsToApprove(NodeDepth);
 
             _log.WriteInfo(nameof(Broadcast), "", "Attach to tangle");
             var attachResultTrytes = await _repository.AttachToTangleAsync(
                 new Hash(txsToApprove.BranchTransaction),
                 new Hash(txsToApprove.TrunkTransaction),
                 transactions,
-                minWeightMagnitude);
+                NodeMinWeightMagnitude);
 
             var error = await ValidateTransactions(transactions);
             if (!string.IsNullOrEmpty(error))
@@ -385,17 +386,14 @@ namespace Lykke.Service.Iota.Api.Services
 
         public async Task<(string Hash, long Block)> Reattach(string tailTxHash)
         {
-            var depth = 8;
-            var minWeightMagnitude = 14;
             var bundle = await _repository.GetBundleAsync(new Hash(tailTxHash));
-
-            var txsToApprove = await GetTransactionsToApprove(depth);
+            var txsToApprove = await GetTransactionsToApprove(NodeDepth);
 
             var attachResultTrytes = await _repository.AttachToTangleAsync(
                 new Hash(txsToApprove.BranchTransaction),
                 new Hash(txsToApprove.TrunkTransaction),
                 bundle.Transactions,
-                minWeightMagnitude);
+                NodeMinWeightMagnitude);
 
             await BroadcastTransactionsAsync(attachResultTrytes);
             await StoreTransactionsAsync(attachResultTrytes);
@@ -428,7 +426,7 @@ namespace Lykke.Service.Iota.Api.Services
                     new { result.successAttempts, result.error, tx },
                     "Promotion result");
 
-                if (result.successAttempts > 0 || result.error == PromoteError_OldTransaction)
+                if (result.successAttempts > 0 || result.error == PromoteErrorOldTransaction)
                 {
                     return;
                 }
@@ -471,75 +469,20 @@ namespace Lykke.Service.Iota.Api.Services
                 {
                     error = ex.Message;
 
-                    if (error.ToLower().Contains(PromoteError_OldTransaction))
+                    if (error.ToLower().Contains(PromoteErrorOldTransaction))
                     {
-                        error = PromoteError_OldTransaction;
+                        error = PromoteErrorOldTransaction;
                         break;
                     }
-                    if (error.ToLower().Contains(PromoteError_Consistency))
+                    if (error.ToLower().Contains(PromoteErrorConsistency))
                     {
-                        error = PromoteError_Consistency;
+                        error = PromoteErrorConsistency;
                         break;
                     }
                 }
             }
 
             return (successAttempts, error);
-        }
-
-        private async Task<GetTransactionsToApproveResponse> GetTransactionsToApprove(int depth)
-        {
-            var data = new
-            {
-                command = CommandType.GetTransactionsToApprove,
-                depth
-            };
-
-            return await _nodeUrl
-                .WithHeader("X-IOTA-API-Version", "1.5")
-                .PostJsonAsync(data)
-                .ReceiveJson<GetTransactionsToApproveResponse>();
-        }
-
-        private async Task<GetTransactionsToApproveResponse> GetTransactionsToApprove(int depth, string reference)
-        {
-            var data = new
-            {
-                command = CommandType.GetTransactionsToApprove,
-                depth,
-                reference
-            };
-
-            return await _nodeUrl
-                .WithHeader("X-IOTA-API-Version", "1.5")
-                .PostJsonAsync(data)
-                .ReceiveJson<GetTransactionsToApproveResponse>();
-        }
-
-        private async Task BroadcastTransactionsAsync(List<TransactionTrytes> transactions)
-        {
-            var data = new
-            {
-                command = CommandType.BroadcastTransactions,
-                trytes = transactions.Select(t => t.Value).ToList()
-            };
-
-            var result = await _nodeUrl
-                .WithHeader("X-IOTA-API-Version", "1.5")
-                .PostJsonAsync(data);
-        }
-
-        private async Task StoreTransactionsAsync(List<TransactionTrytes> transactions)
-        {
-            var data = new
-            {
-                command = CommandType.StoreTransactions,
-                trytes = transactions.Select(t => t.Value).ToList()
-            };
-
-            var result = await _nodeUrl
-                .WithHeader("X-IOTA-API-Version", "1.5")
-                .PostJsonAsync(data);
         }
 
         private async Task<Transaction> GetTransaction(string hash)
@@ -560,15 +503,65 @@ namespace Lykke.Service.Iota.Api.Services
         {
             bool NeedToRetryException(Exception ex)
             {
-                if (ex is IotaApiException)
-                {
-                    return true;
-                }
-
-                return false;
+                return true;
             }
 
             return await Retry.Try(action, NeedToRetryException, tryCount, _log, 1000);
+        }
+
+        private async Task<GetTransactionsToApproveResponse> GetTransactionsToApprove(int depth)
+        {
+            var data = new
+            {
+                command = CommandType.GetTransactionsToApprove,
+                depth
+            };
+
+            return await _nodeUrl
+                .WithHeader(NodeHeaderName, NodeHeaderValue)
+                .PostJsonAsync(data)
+                .ReceiveJson<GetTransactionsToApproveResponse>();
+        }
+
+        private async Task<GetTransactionsToApproveResponse> GetTransactionsToApprove(int depth, string reference)
+        {
+            var data = new
+            {
+                command = CommandType.GetTransactionsToApprove,
+                depth,
+                reference
+            };
+
+            return await _nodeUrl
+                .WithHeader(NodeHeaderName, NodeHeaderValue)
+                .PostJsonAsync(data)
+                .ReceiveJson<GetTransactionsToApproveResponse>();
+        }
+
+        private async Task BroadcastTransactionsAsync(List<TransactionTrytes> transactions)
+        {
+            var data = new
+            {
+                command = CommandType.BroadcastTransactions,
+                trytes = transactions.Select(t => t.Value).ToList()
+            };
+
+            var result = await _nodeUrl
+                .WithHeader(NodeHeaderName, NodeHeaderValue)
+                .PostJsonAsync(data);
+        }
+
+        private async Task StoreTransactionsAsync(List<TransactionTrytes> transactions)
+        {
+            var data = new
+            {
+                command = CommandType.StoreTransactions,
+                trytes = transactions.Select(t => t.Value).ToList()
+            };
+
+            var result = await _nodeUrl
+                .WithHeader(NodeHeaderName, NodeHeaderValue)
+                .PostJsonAsync(data);
         }
     }
 }

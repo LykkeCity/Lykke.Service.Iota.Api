@@ -3,12 +3,8 @@ using Lykke.Service.Iota.Api.Core.Services;
 using Lykke.Service.Iota.Api.Shared;
 using Lykke.Service.Iota.Api.Models;
 using Microsoft.AspNetCore.Mvc;
-using System;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
 using System.Threading.Tasks;
-using Lykke.Common.Chaos;
-using Common;
 
 namespace Lykke.Service.Iota.Api.Controllers
 {
@@ -92,14 +88,8 @@ namespace Lykke.Service.Iota.Api.Controllers
             }
         }
 
-        [HttpGet("tx/{hash}/included")]
-        public async Task<bool> BundleIncluded([Required] string hash)
-        {
-            return await _nodeClient.TransactionIncluded(hash);
-        }
-
         [HttpGet("node/info")]
-        public async Task<string> GetNodeInfo()
+        public async Task<object> GetNodeInfo()
         {
             return await _nodeClient.GetNodeInfo();
         }

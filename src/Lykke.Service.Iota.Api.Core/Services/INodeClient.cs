@@ -5,7 +5,7 @@ namespace Lykke.Service.Iota.Api.Core.Services
 {
     public interface INodeClient
     {
-        Task<string> GetNodeInfo();
+        Task<object> GetNodeInfo();
         Task<RealAddressTransaction[]> GetFromAddressTransactions(string address);
         Task<RealAddressTransaction[]> GetToAddressTransactions(string address);
         Task<long> GetAddressBalance(string address, int threshold);
