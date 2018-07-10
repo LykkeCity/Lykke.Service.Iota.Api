@@ -1,4 +1,4 @@
-﻿using Lykke.Service.Iota.Api.Core.Settings.ServiceSettings;
+﻿using Lykke.Service.Iota.Api.Core.Settings;
 
 namespace Lykke.Service.Iota.Api.Settings
 {

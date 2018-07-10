@@ -2,11 +2,11 @@
 using System.Collections.Generic;
 using AzureStorage;
 using AzureStorage.Tables;
-using Common.Log;
 using Lykke.SettingsReader;
 using Lykke.Service.Iota.Api.Core.Domain.Address;
 using Lykke.Service.Iota.Api.Core.Repositories;
 using System.Linq;
+using Lykke.Common.Log;
 
 namespace Lykke.Service.Iota.Api.AzureRepositories
 {
@@ -16,9 +16,9 @@ namespace Lykke.Service.Iota.Api.AzureRepositories
         private static string GetPartitionKey(string addressVirtual) => addressVirtual;
         private static string GetRowKey(string address) => address;
 
-        public AddressRepository(IReloadingManager<string> connectionStringManager, ILog log)
+        public AddressRepository(IReloadingManager<string> connectionStringManager, ILogFactory logFactory)
         {
-            _table = AzureTableStorage<AddressEntity>.Create(connectionStringManager, "Addresses", log);
+            _table = AzureTableStorage<AddressEntity>.Create(connectionStringManager, "Addresses", logFactory);
         }
 
         public async Task<IEnumerable<IAddress>> GetAsync(string addressVirtual)

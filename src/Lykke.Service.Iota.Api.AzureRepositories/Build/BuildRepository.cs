@@ -5,8 +5,8 @@ using Lykke.Service.Iota.Api.Core.Domain.Build;
 using Lykke.SettingsReader;
 using AzureStorage;
 using AzureStorage.Tables;
-using Common.Log;
 using Common;
+using Lykke.Common.Log;
 
 namespace Lykke.Service.Iota.Api.AzureRepositories
 {
@@ -16,9 +16,9 @@ namespace Lykke.Service.Iota.Api.AzureRepositories
         private static string GetPartitionKey(Guid operationId) => operationId.ToString().CalculateHexHash32(3);
         private static string GetRowKey(Guid operationId) => operationId.ToString();
 
-        public BuildRepository(IReloadingManager<string> connectionStringManager, ILog log)
+        public BuildRepository(IReloadingManager<string> connectionStringManager, ILogFactory logFactory)
         {
-            _table = AzureTableStorage<BuildEntity>.Create(connectionStringManager, "Builds", log);
+            _table = AzureTableStorage<BuildEntity>.Create(connectionStringManager, "Builds", logFactory);
         }
 
         public async Task<IBuild> GetAsync(Guid operationId)

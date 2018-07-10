@@ -1,10 +1,9 @@
-﻿using Lykke.Service.Iota.Api.Core.Settings.SlackNotifications;
+﻿using Lykke.Sdk.Settings;
 
 namespace Lykke.Service.Iota.Api.Settings
 {
-    public class AppSettings
+    public class AppSettings : BaseAppSettings
     {
         public IotaApiSettings IotaApi { get; set; }
-        public SlackNotificationsSettings SlackNotifications { get; set; }
     }
 }

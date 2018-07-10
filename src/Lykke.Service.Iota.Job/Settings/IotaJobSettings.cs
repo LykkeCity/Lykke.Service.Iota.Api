@@ -1,5 +1,5 @@
 ﻿using Lykke.Common.Chaos;
-using Lykke.Service.Iota.Api.Core.Settings.ServiceSettings;
+using Lykke.Service.Iota.Api.Core.Settings;
 using Lykke.SettingsReader.Attributes;
 using System;
 

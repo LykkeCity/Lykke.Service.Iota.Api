@@ -13,6 +13,7 @@ using Common;
 using Lykke.Service.Iota.Api.Services.Helpers;
 using Flurl.Http;
 using Lykke.Service.Iota.Api.Core.Domain.Address;
+using Lykke.Common.Log;
 
 namespace Lykke.Service.Iota.Api.Services
 {
@@ -30,14 +31,14 @@ namespace Lykke.Service.Iota.Api.Services
         private readonly RestIotaRepository _repository;
         private readonly string _nodeUrl;
 
-        public NodeClient(ILog log, string nodeUrl)
+        public NodeClient(ILogFactory logFactory, string nodeUrl)
         {
             var restClient = new RestClient(nodeUrl)
             {
                 Timeout = 30000
             };
 
-            _log = log.CreateComponentScope(nameof(NodeClient));
+            _log = logFactory.CreateLog(this);
             _repository = new RestIotaRepository(restClient, new PoWService(new CpuPearlDiver()));
             _nodeUrl = nodeUrl;
         }
@@ -322,38 +323,40 @@ namespace Lykke.Service.Iota.Api.Services
 
         public async Task<(string Hash, long? Block, string Error)> Broadcast(string[] trytes)
         {
-            _log.WriteInfo(nameof(Broadcast), "", "Get txs from trytes");
+            _log.Info("Get txs from trytes");
             var transactions = trytes.Select(f => Transaction.FromTrytes(new TransactionTrytes(f)));
 
-            _log.WriteInfo(nameof(Broadcast), "", "Get transactions to approve");
+            _log.Info("Get transactions to approve");
             var txsToApprove = await GetTransactionsToApprove(NodeDepth);
 
-            _log.WriteInfo(nameof(Broadcast), "", "Attach to tangle");
+            _log.Info("Attach to tangle");
             var attachResultTrytes = await _repository.AttachToTangleAsync(
                 new Hash(txsToApprove.BranchTransaction),
                 new Hash(txsToApprove.TrunkTransaction),
                 transactions,
                 NodeMinWeightMagnitude);
 
+            _log.Info("Validate transactions");
             var error = await ValidateTransactions(transactions);
             if (!string.IsNullOrEmpty(error))
             {
                 return (null, null, error);
             }
 
-            _log.WriteInfo(nameof(Broadcast), "", "Broadcast transactions");
+            _log.Info("Broadcast transactions");
             await BroadcastTransactionsAsync(attachResultTrytes);
 
-            _log.WriteInfo(nameof(Broadcast), "", "Store transactions");
+            _log.Info("Store transactions");
             await StoreTransactionsAsync(attachResultTrytes);
 
-            _log.WriteInfo(nameof(Broadcast), "", "Get broadcated txs");
-            var txsBroadcasted = attachResultTrytes.Select(f => Transaction.FromTrytes(f)).ToList();
+            var txsBroadcasted = attachResultTrytes
+                .Select(f => Transaction.FromTrytes(f))
+                .ToList();
+            var tailTx = txsBroadcasted
+                .Where(f => f.IsTail)
+                .First();
 
-            _log.WriteInfo(nameof(Broadcast), "", "Get tailed tx");
-            var tailTx = txsBroadcasted.Where(f => f.IsTail).First();
-
-            _log.WriteInfo(nameof(Broadcast), tailTx.ToJson(), "Tailed tx");
+            _log.Info("Tailed tx", tailTx);
 
             return (tailTx.BundleHash.Value, tailTx.Timestamp, null);
         }
@@ -428,9 +431,7 @@ namespace Lykke.Service.Iota.Api.Services
                 .Select(f => new Hash(f))
                 .ToList();
 
-            _log.WriteInfo(nameof(Promote),
-                new { attempts, depth, txsNumber = txs.Length },
-                "Promote txs");
+            _log.Info("Promote txs", new { attempts, depth, txsNumber = txs.Length });
 
             foreach (var hash in hashes)
             {
@@ -438,9 +439,7 @@ namespace Lykke.Service.Iota.Api.Services
 
                 var result = await PromoteTx(tx, attempts, depth);
 
-                _log.WriteInfo(nameof(Promote),
-                    new { result.successAttempts, result.error, tx },
-                    "Promotion result");
+                _log.Info("Promotion result", new { result.successAttempts, result.error, tx });
 
                 if (result.successAttempts > 0 || result.error == PromoteErrorOldTransaction)
                 {

@@ -2,12 +2,14 @@
 using System.Net;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
 using Common;
 using Common.Log;
+using Lykke.Common.Log;
 using Lykke.Common.Api.Contract.Responses;
 using Lykke.Service.BlockchainApi.Contract.Transactions;
 using Lykke.Service.BlockchainApi.Contract;
@@ -17,7 +19,6 @@ using Lykke.Service.Iota.Api.Helpers;
 using Lykke.Service.Iota.Api.Shared;
 using Lykke.Service.Iota.Api.Core.Services;
 using Lykke.Service.Iota.Api.Core.Domain.Address;
-using System.Collections.Generic;
 
 namespace Lykke.Service.Iota.Api.Controllers
 {
@@ -33,17 +34,16 @@ namespace Lykke.Service.Iota.Api.Controllers
         private readonly INodeClient _nodeClient;
         private readonly IIotaService _iotaService;
 
-        public TransactionsController(ILog log, 
+        public TransactionsController(ILogFactory logFactory, 
             IBuildRepository buildRepository,
             IAddressRepository addressRepository,
             IAddressInputRepository addressInputRepository,
             IBroadcastRepository broadcastRepository,
             IBroadcastInProgressRepository broadcastInProgressRepository,
-            IAddressTransactionRepository addressTransactionRepository,
             INodeClient nodeClient,
             IIotaService iotaService)
         {
-            _log = log.CreateComponentScope(nameof(TransactionsController));
+            _log = logFactory.CreateLog(this);
             _buildRepository = buildRepository;
             _addressRepository = addressRepository;
             _addressInputRepository = addressInputRepository;
@@ -85,8 +85,7 @@ namespace Lykke.Service.Iota.Api.Controllers
                 });
             }
 
-            await _log.WriteInfoAsync(nameof(TransactionsController), nameof(Build),
-                request.ToJson(), "Build transaction");
+            _log.Info("Build transaction", request);
 
             var txType = request.GetTransactionType();
 
@@ -132,9 +131,6 @@ namespace Lykke.Service.Iota.Api.Controllers
                 var addressHasCashOut = await _nodeClient.HasCashOutTransaction(addressInput.Address);
                 if (addressHasCashOut)
                 {
-                    _log.WriteInfo(nameof(Build), new { addressInput.Address },
-                        "Input address has completed cash-out transaction");
-
                     return BlockchainErrorResponse.FromUnknownError(
                         $"Input address {addressInput.Address} has completed cash-out transaction");
                 }
@@ -142,11 +138,8 @@ namespace Lykke.Service.Iota.Api.Controllers
                 var hasPendingTx = await _nodeClient.HasPendingTransaction(addressInput.Address);
                 if (hasPendingTx)
                 {
-                    _log.WriteInfo(nameof(Build), new { addressInput.Address },
-                        "Input address has pending transaction");
-
                     return BlockchainErrorResponse.FromUnknownError(
-                        $"{addressInput.Address} has pending transaction");
+                        $"Input address {addressInput.Address} has pending transaction");
                 }
             }
 
@@ -165,9 +158,6 @@ namespace Lykke.Service.Iota.Api.Controllers
                 var addressHasCashOut = await _nodeClient.HasCashOutTransaction(toRealAddress);
                 if (addressHasCashOut)
                 {
-                    _log.WriteInfo(nameof(Build), new { Address = toRealAddress },
-                        "Output address has completed cash-out transaction");
-
                     return BlockchainErrorResponse.FromUnknownError(
                         $"Output address {toRealAddress} has completed cash-out transaction");
                 }
@@ -175,11 +165,8 @@ namespace Lykke.Service.Iota.Api.Controllers
                 var hasPendingTx = await _nodeClient.HasPendingTransaction(toRealAddress, true);
                 if (hasPendingTx)
                 {
-                    _log.WriteInfo(nameof(Build), new { Address = toRealAddress },
-                        "Output address has pending transaction");
-
                     return BlockchainErrorResponse.FromUnknownError(
-                        $"The output {toRealAddress} address has pending transaction");
+                        $"Output address {toRealAddress} has pending transaction");
                 }
             }
 
@@ -188,9 +175,6 @@ namespace Lykke.Service.Iota.Api.Controllers
                 var addressHasCashOut = await _nodeClient.HasCashOutTransaction(toAddress);
                 if (addressHasCashOut)
                 {
-                    _log.WriteInfo(nameof(Build), new { Address = toAddress },
-                        "Output address has completed cash-out transaction");
-
                     return BlockchainErrorResponse.FromUnknownError(
                         $"Output address {toAddress} has completed cash-out transaction");
                 }
@@ -251,7 +235,7 @@ namespace Lykke.Service.Iota.Api.Controllers
                 return BadRequest(ErrorResponse.Create($"{nameof(request.SignedTransaction)} is not a valid"));
             }
 
-            _log.WriteInfo(nameof(Broadcast), request.ToJson(), "Broadcast transaction");
+            _log.Info("Broadcast transaction", request);
 
             var result = await _nodeClient.Broadcast(context.Transactions);
             if (!result.Block.HasValue)
@@ -299,9 +283,7 @@ namespace Lykke.Service.Iota.Api.Controllers
                 return NoContent();
             }
 
-            await _log.WriteInfoAsync(nameof(TransactionsController), nameof(DeleteBroadcast),
-                new { operationId = operationId }.ToJson(), 
-                "Delete broadcast");
+            _log.Info("Delete broadcast", new { operationId = operationId });
 
             await _buildRepository.DeleteAsync(broadcast.OperationId);
             await _broadcastInProgressRepository.DeleteAsync(broadcast.OperationId);

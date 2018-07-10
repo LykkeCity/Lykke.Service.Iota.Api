@@ -6,7 +6,7 @@ using Lykke.SettingsReader;
 using Lykke.Service.Iota.Api.Core.Domain.Balance;
 using Lykke.Service.Iota.Api.Core.Repositories;
 using Common;
-using Common.Log;
+using Lykke.Common.Log;
 
 namespace Lykke.Service.Iota.Api.AzureRepositories
 {
@@ -16,9 +16,9 @@ namespace Lykke.Service.Iota.Api.AzureRepositories
         private static string GetPartitionKey(string address) => address.CalculateHexHash32(3);
         private static string GetRowKey(string address) => address;
 
-        public BalanceRepository(IReloadingManager<string> connectionStringManager, ILog log)
+        public BalanceRepository(IReloadingManager<string> connectionStringManager, ILogFactory logFactory)
         {
-            _table = AzureTableStorage<BalanceEntity>.Create(connectionStringManager, "Balances", log);
+            _table = AzureTableStorage<BalanceEntity>.Create(connectionStringManager, "Balances", logFactory);
         }
 
         public async Task<(IEnumerable<IBalance> Entities, string ContinuationToken)> GetAsync(int take, string continuation)

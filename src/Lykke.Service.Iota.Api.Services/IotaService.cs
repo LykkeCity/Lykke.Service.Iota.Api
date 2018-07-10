@@ -1,30 +1,25 @@
-﻿using Common.Log;
-using Lykke.Service.Iota.Api.Core.Repositories;
+﻿using Lykke.Service.Iota.Api.Core.Repositories;
 using Lykke.Service.Iota.Api.Core.Services;
 using Lykke.Service.Iota.Api.Shared;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Tangle.Net.Entity;
 
 namespace Lykke.Service.Iota.Api.Services
 {
     public class IotaService : IIotaService
     {
-        private readonly ILog _log;
         private readonly IAddressInputRepository _addressInputRepository;
         private readonly IBuildRepository _buildRepository;
         private readonly INodeClient _nodeClient;
         private readonly int _minConfirmations;
 
-        public IotaService(ILog log,
-            IAddressInputRepository addressInputRepository,
+        public IotaService(IAddressInputRepository addressInputRepository,
             IBuildRepository buildRepository,
             IBalanceRepository balanceRepository,
             INodeClient nodeClient,
             int minConfirmations)
         {
-            _log = log;
             _addressInputRepository = addressInputRepository;
             _buildRepository = buildRepository;
             _nodeClient = nodeClient;

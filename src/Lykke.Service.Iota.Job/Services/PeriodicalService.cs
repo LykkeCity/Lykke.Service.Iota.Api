@@ -11,6 +11,7 @@ using Lykke.Service.Iota.Api.Core.Repositories;
 using Lykke.Service.Iota.Api.Shared;
 using Lykke.Service.Iota.Job.Settings;
 using Lykke.Service.Iota.Api.Core.Domain.Broadcast;
+using Lykke.Common.Log;
 
 namespace Lykke.Service.Iota.Job.Services
 {
@@ -23,33 +24,30 @@ namespace Lykke.Service.Iota.Job.Services
         private readonly IBalanceRepository _balanceRepository;
         private readonly IBalancePositiveRepository _balancePositiveRepository;
         private readonly IAddressInputRepository _addressInputRepository;
-        private readonly IAddressTransactionRepository _addressTransactionRepository;
         private readonly IBuildRepository _buildRepository;
         private readonly INodeClient _nodeClient;
         private readonly IIotaService _iotaService;
         private readonly IotaJobSettings _settings;
 
-        public PeriodicalService(ILog log,
+        public PeriodicalService(ILogFactory logFactory,
             IChaosKitty chaosKitty,
             IBroadcastRepository broadcastRepository,
             IBroadcastInProgressRepository broadcastInProgressRepository,
             IBalanceRepository balanceRepository,
             IBalancePositiveRepository balancePositiveRepository,
             IAddressInputRepository addressInputRepository,
-            IAddressTransactionRepository addressTransactionRepository,
             IBuildRepository buildRepository,
             INodeClient nodeClient,
             IIotaService iotaService,
             IotaJobSettings settings)
         {
-            _log = log.CreateComponentScope(nameof(PeriodicalService));
+            _log = logFactory.CreateLog(this);
             _chaosKitty = chaosKitty;
             _broadcastRepository = broadcastRepository;
             _broadcastInProgressRepository = broadcastInProgressRepository;
             _balanceRepository = balanceRepository;
             _balancePositiveRepository = balancePositiveRepository;
             _addressInputRepository = addressInputRepository;
-            _addressTransactionRepository = addressTransactionRepository;
             _buildRepository = buildRepository;
             _nodeClient = nodeClient;
             _iotaService = iotaService;
@@ -65,15 +63,9 @@ namespace Lykke.Service.Iota.Job.Services
                 var bundleInfo = await _nodeClient.GetBundleInfo(item.Hash);
                 if (bundleInfo.Included)
                 {
-                    _log.WriteInfo(nameof(UpdateBroadcasts),
-                        new { item.OperationId, amount = bundleInfo.Value, bundleInfo.Block },
-                        $"Brodcast update is detected");
+                    _log.Info("Brodcast update is detected", new { item.OperationId, amount = bundleInfo.Value, bundleInfo.Block });
 
                     await _broadcastRepository.SaveAsCompletedAsync(item.OperationId, bundleInfo.Value, 0, bundleInfo.Block);
-
-                    _chaosKitty.Meow(item.OperationId);
-
-                    await SaveAddressTransactions(item);
 
                     _chaosKitty.Meow(item.OperationId);
 
@@ -82,29 +74,6 @@ namespace Lykke.Service.Iota.Job.Services
                     _chaosKitty.Meow(item.OperationId);
 
                     await RefreshOperationBalances(item.OperationId);
-                }
-            }
-        }
-
-        private async Task SaveAddressTransactions(IBroadcastInProgress item)
-        {
-            var build = await _buildRepository.GetAsync(item.OperationId);
-            if (build != null)
-            {
-                var transactionContext = JsonConvert.DeserializeObject<TransactionContext>(build.TransactionContext);
-
-                var virtualAddresses = transactionContext.Inputs
-                    .Select(f => f.VirtualAddress)
-                    .ToList();
-                var outputVirtualAddresses = transactionContext.Outputs
-                    .Where(f => f.Address.StartsWith(Consts.VirtualAddressPrefix))
-                    .Select(f => f.Address);
-
-                virtualAddresses.AddRange(outputVirtualAddresses);
-
-                foreach (var virtualAddress in virtualAddresses.Distinct())
-                {
-                    await _addressTransactionRepository.SaveAsync(virtualAddress, item.Hash, build.TransactionContext, item.OperationId);
                 }
             }
         }
@@ -165,8 +134,7 @@ namespace Lykke.Service.Iota.Job.Services
 
                         var result = await _nodeClient.Reattach(txLast);
 
-                        _log.WriteInfo(nameof(ReattachBroadcasts), new { New = result.Hash, Old = txLast }, 
-                            $"Reattach transaction");
+                        _log.Info("Reattach transaction", new { New = result.Hash, Old = txLast });
                     }
                 }
             }
@@ -191,8 +159,7 @@ namespace Lykke.Service.Iota.Job.Services
 
             virtualAddresses = virtualAddresses.Distinct().ToList();
 
-            _log.WriteInfo(nameof(RefreshOperationBalances), new { virtualAddresses },
-                $"Refresh virtual addresses from broadcast");
+            _log.Info("Refresh virtual addresses from broadcast", new { virtualAddresses });
 
             foreach (var virtualAddress in virtualAddresses)
             {
@@ -214,16 +181,14 @@ namespace Lykke.Service.Iota.Job.Services
                 var balancePositive = await _balancePositiveRepository.GetAsync(virtualAddress);
                 if (balancePositive == null)
                 {
-                    _log.WriteInfo(nameof(RefreshAddressBalance), new { virtualAddress, balance, block },
-                        $"Positive balance is detected");
+                    _log.Info("Positive balance is detected", new { virtualAddress, balance, block });
 
                     await RefreshInputs(virtualAddress);
                 }
                 if (balancePositive != null && balancePositive.Amount != balance)
                 {
-                    _log.WriteInfo(nameof(RefreshAddressBalance),
-                        new { virtualAddress, balance, oldBalance = balancePositive.Amount, block },
-                        $"Change in positive balance is detected");
+                    _log.Info("Change in positive balance is detected",
+                        new { virtualAddress, balance, oldBalance = balancePositive.Amount, block });
 
                     await RefreshInputs(virtualAddress);
                 }
@@ -237,8 +202,7 @@ namespace Lykke.Service.Iota.Job.Services
 
             if (balance == 0 && deleteZeroBalance)
             {
-                _log.WriteInfo(nameof(RefreshAddressBalance), new { virtualAddress, balance = 0 },
-                    $"Zero balance is detected");
+                _log.Info($"Zero balance is detected", new { virtualAddress, balance = 0 });
 
                 await RefreshInputs(virtualAddress);
 
@@ -258,9 +222,8 @@ namespace Lykke.Service.Iota.Job.Services
                 var wasSpent = await _nodeClient.HasCashOutTransaction(input.Address);
                 if (wasSpent)
                 {
-                    _log.WriteInfo(nameof(RefreshInputs),
-                        new { input.AddressVirtual, input.Address, input.Index },
-                        $"Input with used private key is removed");
+                    _log.Info("Input with used private key is removed", 
+                        new { input.AddressVirtual, input.Address, input.Index });
 
                     await _addressInputRepository.DeleteAsync(input.AddressVirtual, input.Address);
                 }

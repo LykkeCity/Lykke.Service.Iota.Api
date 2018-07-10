@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using AzureStorage;
 using AzureStorage.Tables;
-using Common.Log;
 using Lykke.SettingsReader;
 using Lykke.Service.Iota.Api.Core.Repositories;
 using Lykke.Service.Iota.Api.Core.Domain.Broadcast;
 using Common;
+using Lykke.Common.Log;
 
 namespace Lykke.Service.Iota.Api.AzureRepositories
 {
@@ -17,9 +17,9 @@ namespace Lykke.Service.Iota.Api.AzureRepositories
         private static string GetPartitionKey(Guid operationId) => operationId.ToString().CalculateHexHash32(3);
         private static string GetRowKey(Guid operationId) => operationId.ToString();
 
-        public BroadcastInProgressRepository(IReloadingManager<string> connectionStringManager, ILog log)
+        public BroadcastInProgressRepository(IReloadingManager<string> connectionStringManager, ILogFactory logFactory)
         {
-            _table = AzureTableStorage<BroadcastInProgressEntity>.Create(connectionStringManager, "BroadcastsInProgress", log);
+            _table = AzureTableStorage<BroadcastInProgressEntity>.Create(connectionStringManager, "BroadcastsInProgress", logFactory);
         }
 
         public async Task<IEnumerable<IBroadcastInProgress>> GetAllAsync()

@@ -1,47 +1,29 @@
 ﻿using Autofac;
-using Common.Log;
 using Lykke.SettingsReader;
 using Lykke.Service.Iota.Api.Core.Services;
 using Lykke.Service.Iota.Api.Core.Repositories;
 using Lykke.Service.Iota.Api.Services;
 using Lykke.Service.Iota.Api.Settings;
 using Lykke.Service.Iota.Api.AzureRepositories;
-using Lykke.Common.Chaos;
 
 namespace Lykke.Service.Iota.Api.Modules
 {
     public class ServiceModule : Module
     {
-        private readonly IReloadingManager<IotaApiSettings> _settings;
-        private readonly ILog _log;
+        private readonly IReloadingManager<AppSettings> _settings;
 
-        public ServiceModule(IReloadingManager<IotaApiSettings> settings, ILog log)
+        public ServiceModule(IReloadingManager<AppSettings> settings)
         {
             _settings = settings;
-            _log = log;
         }
 
         protected override void Load(ContainerBuilder builder)
         {
-            var connectionStringManager = _settings.ConnectionString(x => x.Db.DataConnString);
+            var connectionStringManager = _settings.ConnectionString(x => x.IotaApi.Db.DataConnString);
 
-            builder.RegisterInstance(_settings.CurrentValue)
+            builder.RegisterInstance(_settings.CurrentValue.IotaApi)
                 .As<IotaApiSettings>()
                 .SingleInstance();
-
-            builder.RegisterInstance(_log)
-                .As<ILog>()
-                .SingleInstance();
-
-            builder.RegisterType<HealthService>()
-                .As<IHealthService>()
-                .SingleInstance();
-
-            builder.RegisterType<StartupManager>()
-                .As<IStartupManager>();
-
-            builder.RegisterType<ShutdownManager>()
-                .As<IShutdownManager>();
 
             builder.RegisterType<BroadcastRepository>()
                 .As<IBroadcastRepository>()
@@ -83,19 +65,14 @@ namespace Lykke.Service.Iota.Api.Modules
                 .WithParameter(TypedParameter.From(connectionStringManager))
                 .SingleInstance();
 
-            builder.RegisterType<AddressTransactionRepository>()
-                .As<IAddressTransactionRepository>()
-                .WithParameter(TypedParameter.From(connectionStringManager))
-                .SingleInstance();
-
             builder.RegisterType<NodeClient>()
                 .As<INodeClient>()
-                .WithParameter("nodeUrl", _settings.CurrentValue.NodeUrl)
+                .WithParameter("nodeUrl", _settings.CurrentValue.IotaApi.NodeUrl)
                 .SingleInstance();
 
             builder.RegisterType<IotaService>()
                 .As<IIotaService>()
-                .WithParameter("minConfirmations", _settings.CurrentValue.MinConfirmations)
+                .WithParameter("minConfirmations", _settings.CurrentValue.IotaApi.MinConfirmations)
                 .SingleInstance();
         }
     }

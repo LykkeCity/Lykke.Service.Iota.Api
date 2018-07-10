@@ -1,10 +1,9 @@
-﻿using Lykke.Service.Iota.Api.Core.Settings.SlackNotifications;
+﻿using Lykke.Sdk.Settings;
 
 namespace Lykke.Service.Iota.Job.Settings
 {
-    public class AppSettings
+    public class AppSettings : BaseAppSettings
     {
         public IotaJobSettings IotaJob { get; set; }
-        public SlackNotificationsSettings SlackNotifications { get; set; }
     }
 }

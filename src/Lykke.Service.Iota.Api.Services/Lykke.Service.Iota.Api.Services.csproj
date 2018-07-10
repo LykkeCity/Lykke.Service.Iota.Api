@@ -8,9 +8,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CsvHelper" Version="3.1.1" />
-    <PackageReference Include="Flurl" Version="2.6.0" />
-    <PackageReference Include="Flurl.Http" Version="2.0.1" />
+    <PackageReference Include="CsvHelper" Version="7.1.1" />
+    <PackageReference Include="Flurl" Version="2.7.1" />
+    <PackageReference Include="Flurl.Http" Version="2.3.2" />
     <PackageReference Include="NBitcoin.Dash" Version="1.0.1" />
     <PackageReference Include="Tangle.Net.Standard" Version="1.0.7.4" />
   </ItemGroup>

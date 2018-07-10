@@ -1,5 +1,4 @@
 ﻿using Autofac;
-using Common.Log;
 using Lykke.Service.Iota.Api.Core.Services;
 using Lykke.Service.Iota.Api.Core.Repositories;
 using Lykke.Service.Iota.Api.Services;
@@ -14,38 +13,22 @@ namespace Lykke.Service.Iota.Job.Modules
 {
     public class JobModule : Module
     {
-        private readonly IReloadingManager<IotaJobSettings> _settings;
-        private readonly ILog _log;
+        private readonly IReloadingManager<AppSettings> _settings;
 
-        public JobModule(IReloadingManager<IotaJobSettings> settings, ILog log)
+        public JobModule(IReloadingManager<AppSettings> settings)
         {
             _settings = settings;
-            _log = log;
         }
 
         protected override void Load(ContainerBuilder builder)
         {
-            var connectionStringManager = _settings.ConnectionString(x => x.Db.DataConnString);
+            var connectionStringManager = _settings.ConnectionString(x => x.IotaJob.Db.DataConnString);
 
-            builder.RegisterInstance(_settings.CurrentValue)
+            builder.RegisterInstance(_settings.CurrentValue.IotaJob)
                 .As<IotaJobSettings>()
                 .SingleInstance();
 
-            builder.RegisterChaosKitty(_settings.CurrentValue.ChaosKitty);
-
-            builder.RegisterInstance(_log)
-                .As<ILog>()
-                .SingleInstance();
-
-            builder.RegisterType<HealthService>()
-                .As<IHealthService>()
-                .SingleInstance();
-
-            builder.RegisterType<StartupManager>()
-                .As<IStartupManager>();
-
-            builder.RegisterType<ShutdownManager>()
-                .As<IShutdownManager>();
+            builder.RegisterChaosKitty(_settings.CurrentValue.IotaJob.ChaosKitty);
 
             builder.RegisterType<AddressRepository>()
                 .As<IAddressRepository>()
@@ -61,11 +44,6 @@ namespace Lykke.Service.Iota.Job.Modules
                 .As<IAddressVirtualRepository>()
                 .WithParameter(TypedParameter.From(connectionStringManager))
                 .SingleInstance();
-
-            builder.RegisterType<AddressTransactionRepository>()
-                .As<IAddressTransactionRepository>()
-                .WithParameter(TypedParameter.From(connectionStringManager))
-                .SingleInstance();            
 
             builder.RegisterType<BroadcastRepository>()
                 .As<IBroadcastRepository>()
@@ -98,32 +76,32 @@ namespace Lykke.Service.Iota.Job.Modules
 
             builder.RegisterType<NodeClient>()
                 .As<INodeClient>()
-                .WithParameter("nodeUrl", _settings.CurrentValue.NodeUrl)
+                .WithParameter("nodeUrl", _settings.CurrentValue.IotaJob.NodeUrl)
                 .SingleInstance();
 
             builder.RegisterType<IotaService>()
                 .As<IIotaService>()
-                .WithParameter("minConfirmations", _settings.CurrentValue.MinConfirmations)
+                .WithParameter("minConfirmations", _settings.CurrentValue.IotaJob.MinConfirmations)
                 .SingleInstance();
 
             builder.RegisterType<BalanceHandler>()
                 .AutoActivate()
-                .WithParameter("period", _settings.CurrentValue.BalanceCheckerInterval)
+                .WithParameter("period", _settings.CurrentValue.IotaJob.BalanceCheckerInterval)
                 .SingleInstance();
 
             builder.RegisterType<BroadcastHandler>()
                 .AutoActivate()
-                .WithParameter("period", _settings.CurrentValue.BroadcastCheckerInterval)
+                .WithParameter("period", _settings.CurrentValue.IotaJob.BroadcastCheckerInterval)
                 .SingleInstance();
 
             builder.RegisterType<PromotionHandler>()
                 .AutoActivate()
-                .WithParameter("period", _settings.CurrentValue.PromotionHandlerInterval)
+                .WithParameter("period", _settings.CurrentValue.IotaJob.PromotionHandlerInterval)
                 .SingleInstance();
 
             builder.RegisterType<ReattachmentHandler>()
                 .AutoActivate()
-                .WithParameter("period", _settings.CurrentValue.ReattachmentHandlerInterval)
+                .WithParameter("period", _settings.CurrentValue.IotaJob.ReattachmentHandlerInterval)
                 .SingleInstance();            
         }
     }

@@ -1,4 +1,4 @@
-﻿namespace Lykke.Service.Iota.Api.Core.Settings.ServiceSettings
+﻿namespace Lykke.Service.Iota.Api.Core.Settings
 {
     public class DbSettings
     {

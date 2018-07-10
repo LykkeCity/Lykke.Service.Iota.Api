@@ -2,11 +2,11 @@
 using System.Collections.Generic;
 using AzureStorage;
 using AzureStorage.Tables;
-using Common.Log;
 using Lykke.SettingsReader;
 using Lykke.Service.Iota.Api.Core.Domain.Balance;
 using Lykke.Service.Iota.Api.Core.Repositories;
 using Common;
+using Lykke.Common.Log;
 
 namespace Lykke.Service.Iota.Api.AzureRepositories
 {
@@ -16,9 +16,9 @@ namespace Lykke.Service.Iota.Api.AzureRepositories
         private static string GetPartitionKey(string address) => address.CalculateHexHash32(3);
         private static string GetRowKey(string address) => address;
 
-        public BalancePositiveRepository(IReloadingManager<string> connectionStringManager, ILog log)
+        public BalancePositiveRepository(IReloadingManager<string> connectionStringManager, ILogFactory logFactory)
         {
-            _table = AzureTableStorage<BalancePositiveEntity>.Create(connectionStringManager, "BalancesPositive", log);
+            _table = AzureTableStorage<BalancePositiveEntity>.Create(connectionStringManager, "BalancesPositive", logFactory);
         }
 
         public async Task<IEnumerable<IBalancePositive>> GetAllAsync()
