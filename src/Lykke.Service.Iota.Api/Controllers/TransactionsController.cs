@@ -26,15 +26,16 @@ namespace Lykke.Service.Iota.Api.Controllers
     {
         private readonly ILog _log;
         private readonly IBuildRepository _buildRepository;
+        private readonly IAddressRepository _addressRepository;
         private readonly IAddressInputRepository _addressInputRepository;
         private readonly IBroadcastRepository _broadcastRepository;
         private readonly IBroadcastInProgressRepository _broadcastInProgressRepository;
-        private readonly IAddressTransactionRepository _addressTransactionRepository;
         private readonly INodeClient _nodeClient;
         private readonly IIotaService _iotaService;
 
         public TransactionsController(ILog log, 
             IBuildRepository buildRepository,
+            IAddressRepository addressRepository,
             IAddressInputRepository addressInputRepository,
             IBroadcastRepository broadcastRepository,
             IBroadcastInProgressRepository broadcastInProgressRepository,
@@ -44,10 +45,10 @@ namespace Lykke.Service.Iota.Api.Controllers
         {
             _log = log.CreateComponentScope(nameof(TransactionsController));
             _buildRepository = buildRepository;
+            _addressRepository = addressRepository;
             _addressInputRepository = addressInputRepository;
             _broadcastRepository = broadcastRepository;
             _broadcastInProgressRepository = broadcastInProgressRepository;
-            _addressTransactionRepository = addressTransactionRepository;
             _nodeClient = nodeClient;
             _iotaService = iotaService;
         }
@@ -326,18 +327,11 @@ namespace Lykke.Service.Iota.Api.Controllers
 
             if (address.StartsWith(Consts.VirtualAddressPrefix))
             {
-                //_addressTransactionRepository.GetAsync(address, take, continuation);
+                txs = await GetFromVirtualAddressTransactions(address, take, afterHash);
             }
             else
             {
-                var txsAll = await _nodeClient.GetFromAddressTransactions(address);
-
-                txs = txsAll
-                    .Reverse()
-                    .TakeWhile(f => f.Hash == afterHash)
-                    .Take(take)
-                    .Reverse()
-                    .ToList();
+                txs = GetTxs(await _nodeClient.GetFromAddressTransactions(address), take, afterHash);
             }
 
             return Ok(GetHistoricalTxs(txs, BlockchainApi.Contract.Transactions.TransactionType.Send));
@@ -360,24 +354,113 @@ namespace Lykke.Service.Iota.Api.Controllers
 
             if (address.StartsWith(Consts.VirtualAddressPrefix))
             {
-
+                txs = await GetToVirtualAddressTransactions(address, take, afterHash);
             }
             else
             {
-                var txsAll = await _nodeClient.GetToAddressTransactions(address);
-
-                txs = txsAll
-                    .Reverse()
-                    .TakeWhile(f => f.Hash == afterHash)
-                    .Take(take)
-                    .Reverse()
-                    .ToList();
+                txs = GetTxs(await _nodeClient.GetToAddressTransactions(address), take, afterHash);
             }
 
             return Ok(GetHistoricalTxs(txs, BlockchainApi.Contract.Transactions.TransactionType.Receive));
         }
 
-        private static HistoricalTransactionContract[] GetHistoricalTxs(List<RealAddressTransaction> txs,
+        private async Task<List<RealAddressTransaction>> GetFromVirtualAddressTransactions(string virtualAddress, int take, string afterHash)
+        {
+            var txs = new List<RealAddressTransaction>();
+
+            var addresses = await _addressRepository.GetAsync(virtualAddress);
+            if (addresses.Any())
+            {
+                if (!string.IsNullOrEmpty(afterHash))
+                {
+                    var bundleAddresses = await _nodeClient.GetBundleAddresses(afterHash);
+                    if (!string.IsNullOrEmpty(bundleAddresses.From))
+                    {
+                        var address = addresses.FirstOrDefault(f => f.Address == bundleAddresses.From);
+                        if (address != null)
+                        {
+                            addresses = addresses.Where(f => f.Index >= address.Index);
+                        }
+                    }
+                }
+
+                foreach (var address in addresses)
+                {
+                    var fromAddressTxs = await _nodeClient.GetFromAddressTransactions(address.Address);
+                    foreach (var fromAddressTx in fromAddressTxs)
+                    {
+                        if (fromAddressTx.Hash != afterHash)
+                        {
+                            txs.Add(fromAddressTx);
+
+                            if (txs.Count >= take)
+                            {
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            return txs;
+        }
+
+        private async Task<List<RealAddressTransaction>> GetToVirtualAddressTransactions(string virtualAddress, int take, string afterHash)
+        {
+            var txs = new List<RealAddressTransaction>();
+
+            var addresses = await _addressRepository.GetAsync(virtualAddress);
+            if (addresses.Any())
+            {
+                if (!string.IsNullOrEmpty(afterHash))
+                {
+                    var bundleAddresses = await _nodeClient.GetBundleAddresses(afterHash);
+                    if (bundleAddresses.To != null)
+                    {
+                        foreach (var toAddress in bundleAddresses.To)
+                        {
+                            var address = addresses.FirstOrDefault(f => f.Address == toAddress);
+                            if (address != null)
+                            {
+                                addresses = addresses.Where(f => f.Index >= address.Index);
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                foreach (var address in addresses)
+                {
+                    var toAddressTxs = await _nodeClient.GetToAddressTransactions(address.Address);
+                    foreach (var toAddressTx in toAddressTxs)
+                    {
+                        if (toAddressTx.Hash != afterHash)
+                        {
+                            txs.Add(toAddressTx);
+
+                            if (txs.Count >= take)
+                            {
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            return txs;
+        }
+
+        private List<RealAddressTransaction> GetTxs(IEnumerable<RealAddressTransaction> txs, int take, string afterHash)
+        {
+            return txs
+                .OrderByDescending(f => f.Timestamp)
+                .TakeWhile(f => f.Hash != afterHash)
+                .Reverse()
+                .Take(take)
+                .ToList();
+        }
+
+        private HistoricalTransactionContract[] GetHistoricalTxs(List<RealAddressTransaction> txs,
             BlockchainApi.Contract.Transactions.TransactionType transactionType)
         {
             return txs.Select(f => new HistoricalTransactionContract

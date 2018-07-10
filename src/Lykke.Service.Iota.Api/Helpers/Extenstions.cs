@@ -7,8 +7,6 @@ using Lykke.Service.Iota.Api.Core.Domain.Balance;
 using Lykke.Service.Iota.Api.Core.Domain.Broadcast;
 using Lykke.Service.Iota.Api.Shared;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Microsoft.WindowsAzure.Storage.Table;
-using Newtonsoft.Json;
 using System;
 using System.Linq;
 using Tangle.Net.Entity;
