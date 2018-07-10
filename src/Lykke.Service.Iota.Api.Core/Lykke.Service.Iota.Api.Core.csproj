@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Lykke.Service.Iota.Api.Shared\Lykke.Service.Iota.Api.Shared.csproj" />
+    <ProjectReference Include="..\Lykke.Service.Iota.Api.Shared\Lykke.Service.Iota.Api.Shared.csproj" />
   </ItemGroup>
 
 </Project>

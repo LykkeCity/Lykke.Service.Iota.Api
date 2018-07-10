@@ -27,7 +27,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lykke.Service.Iota.Api.Azur
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lykke.Service.Iota.Job", "src\Lykke.Service.Iota.Job\Lykke.Service.Iota.Job.csproj", "{B33864B6-7B5D-46C4-A943-5E70454D4F15}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lykke.Service.Iota.Api.Shared", "Lykke.Service.Iota.Api.Shared\Lykke.Service.Iota.Api.Shared.csproj", "{367CA0DC-2D76-41BD-A958-B805813B8A1B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lykke.Service.Iota.Api.Shared", "src\Lykke.Service.Iota.Api.Shared\Lykke.Service.Iota.Api.Shared.csproj", "{367CA0DC-2D76-41BD-A958-B805813B8A1B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
