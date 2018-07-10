@@ -316,7 +316,7 @@ namespace Lykke.Service.Iota.Api.Controllers
                 txs = GetTxs(await _nodeClient.GetFromAddressTransactions(address), take, afterHash);
             }
 
-            return Ok(GetHistoricalTxs(txs, BlockchainApi.Contract.Transactions.TransactionType.Send));
+            return Ok(GetHistoricalTxs(txs));
         }
 
         [HttpGet("history/to/{address}")]
@@ -343,7 +343,7 @@ namespace Lykke.Service.Iota.Api.Controllers
                 txs = GetTxs(await _nodeClient.GetToAddressTransactions(address), take, afterHash);
             }
 
-            return Ok(GetHistoricalTxs(txs, BlockchainApi.Contract.Transactions.TransactionType.Receive));
+            return Ok(GetHistoricalTxs(txs));
         }
 
         private async Task<List<RealAddressTransaction>> GetFromVirtualAddressTransactions(string virtualAddress, int take, string afterHash)
@@ -442,8 +442,7 @@ namespace Lykke.Service.Iota.Api.Controllers
                 .ToList();
         }
 
-        private HistoricalTransactionContract[] GetHistoricalTxs(List<RealAddressTransaction> txs,
-            BlockchainApi.Contract.Transactions.TransactionType transactionType)
+        private HistoricalTransactionContract[] GetHistoricalTxs(List<RealAddressTransaction> txs)
         {
             return txs.Select(f => new HistoricalTransactionContract
             {
@@ -452,8 +451,7 @@ namespace Lykke.Service.Iota.Api.Controllers
                 FromAddress = f.FromAddress,
                 Hash = f.Hash,
                 Timestamp = f.Timestamp,
-                ToAddress = f.ToAddress,
-                TransactionType = transactionType
+                ToAddress = f.ToAddress
             }).ToArray();
         }
     }

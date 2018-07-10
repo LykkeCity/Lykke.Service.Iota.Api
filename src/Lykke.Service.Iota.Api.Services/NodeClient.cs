@@ -9,7 +9,6 @@ using Tangle.Net.Entity;
 using Tangle.Net.Repository;
 using Tangle.Net.ProofOfWork;
 using Tangle.Net.Repository.Responses;
-using Common;
 using Lykke.Service.Iota.Api.Services.Helpers;
 using Flurl.Http;
 using Lykke.Service.Iota.Api.Core.Domain.Address;

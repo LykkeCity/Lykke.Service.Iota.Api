@@ -249,12 +249,15 @@
 						{
 							"listen": "test",
 							"script": {
-								"id": "5bee7399-cf86-41ed-87ff-3beef5956831",
+								"id": "626e9496-9b1c-400f-9846-5cb32785e022",
 								"type": "text/javascript",
 								"exec": [
 									"pm.test(\"Status code is 200\", function () {",
 									"    pm.response.to.have.status(200);",
-									"});"
+									"});",
+									"",
+									"console.info(\"Wait 70 secs\");",
+									"setTimeout(function(){}, 70000);"
 								]
 							}
 						}
@@ -325,11 +328,10 @@
 						{
 							"listen": "prerequest",
 							"script": {
-								"id": "a667f322-526c-4370-94aa-f5439f1e693f",
+								"id": "db73fd4e-6147-4e85-b911-40338a66d0d8",
 								"type": "text/javascript",
 								"exec": [
-									"console.info(\"Wait 70 secs\");",
-									"setTimeout(function(){}, 70000);"
+									""
 								]
 							}
 						}
