@@ -78,9 +78,16 @@ namespace Lykke.Service.Iota.Api.Services
             return false;
         }
 
-        public async Task<(string From, string[] To)> GetBundleAddresses(string hash)
+        public async Task<string> GetTransactionAddress(string txHash)
         {
-            var bundleTxsHashes = await Run(() => _repository.FindTransactionsByBundlesAsync(new List<Hash> { new Hash(hash) }));
+            var tx = await GetTransaction(txHash);
+
+            return tx.Address.ValueWithChecksum();
+        }
+
+        public async Task<(string From, string[] To)> GetBundleAddresses(string bunbleHash)
+        {
+            var bundleTxsHashes = await Run(() => _repository.FindTransactionsByBundlesAsync(new List<Hash> { new Hash(bunbleHash) }));
             if (bundleTxsHashes != null && bundleTxsHashes.Hashes != null)
             {
                 var bundleTxs = await GetTransactions(bundleTxsHashes.Hashes);
@@ -94,7 +101,7 @@ namespace Lykke.Service.Iota.Api.Services
                 var toTxs = bundleFirstAttachmentTxs
                     .Where(f => f.Value > 0);
 
-                return (fromTx?.Address.Value, toTxs.Select(f => f.Address.Value).ToArray());
+                return (fromTx?.Address.ValueWithChecksum(), toTxs.Select(f => f.Address.ValueWithChecksum()).ToArray());
             }
 
             return (null, null);
@@ -141,7 +148,7 @@ namespace Lykke.Service.Iota.Api.Services
                                 {
                                     addressTransactions.Add(new RealAddressTransaction
                                     {
-                                        Hash = bundleFirstAttachmentTailTx.BundleHash.Value,
+                                        Hash = bundleFirstAttachmentFromTx.Hash.Value,
                                         FromAddress = address,
                                         ToAddress = bundleFirstAttachmentFromTx.Address.ValueWithChecksum(),
                                         Amount = bundleFirstAttachmentFromTx.Value,
@@ -207,7 +214,7 @@ namespace Lykke.Service.Iota.Api.Services
                                 {
                                     addressTransactions.Add(new RealAddressTransaction
                                     {
-                                        Hash = bundleFirstAttachmentTailTx.BundleHash.Value,
+                                        Hash = toAddressBundleTx.Hash.Value,
                                         FromAddress = bundleFirstAttachmentFromTx.Address.ValueWithChecksum(),
                                         ToAddress = address,
                                         Amount = toAddressBundleTx.Value,

@@ -309,7 +309,7 @@ namespace Lykke.Service.Iota.Api.Controllers
 
             if (address.StartsWith(Consts.VirtualAddressPrefix))
             {
-                txs = await GetFromVirtualAddressTransactions(address, take, afterHash);
+                txs = await GetVirtualAddressTransactions(address, take, afterHash, true);
             }
             else
             {
@@ -336,7 +336,7 @@ namespace Lykke.Service.Iota.Api.Controllers
 
             if (address.StartsWith(Consts.VirtualAddressPrefix))
             {
-                txs = await GetToVirtualAddressTransactions(address, take, afterHash);
+                txs = await GetVirtualAddressTransactions(address, take, afterHash, false);
             }
             else
             {
@@ -346,7 +346,7 @@ namespace Lykke.Service.Iota.Api.Controllers
             return Ok(GetHistoricalTxs(txs));
         }
 
-        private async Task<List<RealAddressTransaction>> GetFromVirtualAddressTransactions(string virtualAddress, int take, string afterHash)
+        private async Task<List<RealAddressTransaction>> GetVirtualAddressTransactions(string virtualAddress, int take, string afterHash, bool from)
         {
             var txs = new List<RealAddressTransaction>();
 
@@ -355,30 +355,38 @@ namespace Lykke.Service.Iota.Api.Controllers
             {
                 if (!string.IsNullOrEmpty(afterHash))
                 {
-                    var bundleAddresses = await _nodeClient.GetBundleAddresses(afterHash);
-                    if (!string.IsNullOrEmpty(bundleAddresses.From))
+                    var afterHashAddress = await _nodeClient.GetTransactionAddress(afterHash);
+
+                    var address = addresses.FirstOrDefault(f => f.Address == afterHashAddress);
+                    if (address != null)
                     {
-                        var address = addresses.FirstOrDefault(f => f.Address == bundleAddresses.From);
-                        if (address != null)
-                        {
-                            addresses = addresses.Where(f => f.Index >= address.Index);
-                        }
+                        addresses = addresses.Where(f => f.Index >= address.Index);
                     }
                 }
 
                 foreach (var address in addresses)
                 {
-                    var fromAddressTxs = await _nodeClient.GetFromAddressTransactions(address.Address);
-                    foreach (var fromAddressTx in fromAddressTxs)
-                    {
-                        if (fromAddressTx.Hash != afterHash)
-                        {
-                            txs.Add(fromAddressTx);
+                    var addressTxs = (await GetAddressTransactions(address.Address, from))
+                        .OrderByDescending(f => f.Timestamp)
+                        .TakeWhile(f => f.Hash != afterHash)
+                        .Reverse();
 
-                            if (txs.Count >= take)
-                            {
-                                break;
-                            }
+                    if (from)
+                    {
+                        addressTxs = addressTxs.Where(f => !addresses.Any(x => x.Address == f.ToAddress));
+                    }
+                    else
+                    {
+                        addressTxs = addressTxs.Where(f => !addresses.Any(x => x.Address == f.FromAddress));
+                    }
+
+                    foreach (var addressTx in addressTxs)
+                    {
+                        txs.Add(addressTx);
+
+                        if (txs.Count >= take)
+                        {
+                            return txs;
                         }
                     }
                 }
@@ -387,49 +395,14 @@ namespace Lykke.Service.Iota.Api.Controllers
             return txs;
         }
 
-        private async Task<List<RealAddressTransaction>> GetToVirtualAddressTransactions(string virtualAddress, int take, string afterHash)
+        private async Task<IEnumerable<RealAddressTransaction>> GetAddressTransactions(string address, bool from)
         {
-            var txs = new List<RealAddressTransaction>();
-
-            var addresses = await _addressRepository.GetAsync(virtualAddress);
-            if (addresses.Any())
+            if (from)
             {
-                if (!string.IsNullOrEmpty(afterHash))
-                {
-                    var bundleAddresses = await _nodeClient.GetBundleAddresses(afterHash);
-                    if (bundleAddresses.To != null)
-                    {
-                        foreach (var toAddress in bundleAddresses.To)
-                        {
-                            var address = addresses.FirstOrDefault(f => f.Address == toAddress);
-                            if (address != null)
-                            {
-                                addresses = addresses.Where(f => f.Index >= address.Index);
-                                break;
-                            }
-                        }
-                    }
-                }
-
-                foreach (var address in addresses)
-                {
-                    var toAddressTxs = await _nodeClient.GetToAddressTransactions(address.Address);
-                    foreach (var toAddressTx in toAddressTxs)
-                    {
-                        if (toAddressTx.Hash != afterHash)
-                        {
-                            txs.Add(toAddressTx);
-
-                            if (txs.Count >= take)
-                            {
-                                break;
-                            }
-                        }
-                    }
-                }
+                return await _nodeClient.GetFromAddressTransactions(address);
             }
 
-            return txs;
+            return await _nodeClient.GetToAddressTransactions(address);
         }
 
         private List<RealAddressTransaction> GetTxs(IEnumerable<RealAddressTransaction> txs, int take, string afterHash)
