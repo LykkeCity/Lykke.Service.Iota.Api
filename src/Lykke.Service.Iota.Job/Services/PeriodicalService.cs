@@ -131,10 +131,16 @@ namespace Lykke.Service.Iota.Job.Services
                     if (!info.Included && blockTime > _settings.ReattachmentPeriod)
                     {
                         var txLast = info.Txs.Last();
+                        var start = DateTime.Now;
 
                         var result = await _nodeClient.Reattach(txLast);
 
-                        _log.Info("Reattach transaction", new { New = result.Hash, Old = txLast });
+                        _log.Info("Reattach transaction", new
+                        {
+                            secs = Math.Round((DateTime.Now - start).TotalSeconds, 1),
+                            newTx = result.Hash,
+                            oldTx = txLast
+                        });
                     }
                 }
             }

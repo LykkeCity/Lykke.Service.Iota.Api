@@ -329,6 +329,8 @@ namespace Lykke.Service.Iota.Api.Services
 
         public async Task<(string Hash, long? Block, string Error)> Broadcast(string[] trytes)
         {
+            var start = DateTime.Now;
+
             _log.Info("Get txs from trytes");
             var transactions = trytes.Select(f => Transaction.FromTrytes(new TransactionTrytes(f)));
 
@@ -362,7 +364,11 @@ namespace Lykke.Service.Iota.Api.Services
                 .Where(f => f.IsTail)
                 .First();
 
-            _log.Info("Tailed tx", tailTx);
+            _log.Info("Broadcast completed", new
+            {
+                secs = Math.Round((DateTime.Now - start).TotalSeconds, 1),
+                tailTx
+            });
 
             return (tailTx.BundleHash.Value, tailTx.Timestamp, null);
         }
