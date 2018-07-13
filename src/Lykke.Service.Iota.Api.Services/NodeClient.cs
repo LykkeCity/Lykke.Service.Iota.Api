@@ -453,7 +453,7 @@ namespace Lykke.Service.Iota.Api.Services
                         maxAttempts = attempts,
                         result.successAttempts,
                         depth,
-                        secs = (DateTime.Now - start).TotalSeconds,
+                        secs = Math.Round((DateTime.Now - start).TotalSeconds, 1),
                         result.error,
                         tx
                     });
@@ -467,7 +467,7 @@ namespace Lykke.Service.Iota.Api.Services
                 maxAttempts = attempts,
                 successAttempts = 0,
                 depth,
-                secs = (DateTime.Now - start).TotalSeconds,
+                secs = Math.Round((DateTime.Now - start).TotalSeconds, 1),
                 error,
                 tx
             });
