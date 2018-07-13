@@ -432,31 +432,34 @@ namespace Lykke.Service.Iota.Api.Services
         public async Task Promote(string[] txs, int attempts = 3, int depth = 15)
         {
             var tx = "";
+            var error = "";
             var hashes = txs
                 .Reverse()
                 .Select(f => new Hash(f))
                 .ToList();
-
-            _log.Info("Promote txs", new { attempts, depth, txsNumber = txs.Length });
 
             foreach (var hash in hashes)
             {
                 tx = hash.Value;
 
                 var result = await PromoteTx(tx, attempts, depth);
+                error = result.error;
 
-                _log.Info("Promotion result", new { result.successAttempts, result.error, tx });
-
-                if (result.successAttempts > 0 || result.error == PromoteErrorOldTransaction)
+                if (result.successAttempts > 0)
                 {
+                    _log.Info("Promotion result",
+                        new { maxAttempts = attempts, result.successAttempts, result.error, depth, tx });
+
                     return;
                 }
             }
+
+            _log.Info("Promotion result",
+                new { maxAttempts = attempts, successAttempts = 0, error, depth, tx });
         }
 
         private async Task<(int successAttempts, string error)> PromoteTx(string tx, int attempts, int depth)
         {
-            var error = "";
             var successAttempts = 0;
 
             for (var i = 0; i < attempts; i++)
@@ -488,22 +491,11 @@ namespace Lykke.Service.Iota.Api.Services
                 }
                 catch (Exception ex)
                 {
-                    error = ex.Message;
-
-                    if (error.ToLower().Contains(PromoteErrorOldTransaction))
-                    {
-                        error = PromoteErrorOldTransaction;
-                        break;
-                    }
-                    if (error.ToLower().Contains(PromoteErrorConsistency))
-                    {
-                        error = PromoteErrorConsistency;
-                        break;
-                    }
+                    return (successAttempts, ex.Message);
                 }
             }
 
-            return (successAttempts, error);
+            return (successAttempts, "");
         }
 
         private async Task<Transaction> GetTransaction(string hash)

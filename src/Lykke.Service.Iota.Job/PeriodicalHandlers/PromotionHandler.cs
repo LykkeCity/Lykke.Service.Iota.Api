@@ -27,7 +27,7 @@ namespace Lykke.Service.Iota.Job.PeriodicalHandlers
             }
             catch (Exception ex)
             {
-                _log.Error("Failed to promote transactions", ex);
+                _log.Info("Failed to promote transactions", ex.ToString());
             }
         }
     }   

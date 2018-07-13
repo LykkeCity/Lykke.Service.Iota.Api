@@ -13,7 +13,6 @@ namespace Lykke.Service.Iota.Job
         {
             return services.BuildServiceProvider<AppSettings>(options =>
             {
-                options.ApiTitle = "Iota.Job";
                 options.Logs = logs =>
                 {
                     logs.AzureTableName = "IotaJobLog";
@@ -33,6 +32,11 @@ namespace Lykke.Service.Iota.Job
                 {
                     swagger.DescribeAllEnumsAsStrings();
                     swagger.DescribeStringEnumsInCamelCase();
+                };
+
+                options.SwaggerOptions = new LykkeSwaggerOptions
+                {
+                    ApiTitle = "Iota.Job"
                 };
             });
         }
