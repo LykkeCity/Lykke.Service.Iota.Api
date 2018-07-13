@@ -27,7 +27,7 @@ namespace Lykke.Service.Iota.Job.PeriodicalHandlers
             }
             catch (Exception ex)
             {
-                _log.Info("Failed to reattach broadcasts", ex.ToString());
+                _log.Info("Failed to reattach broadcasts", exception: ex);
             }
         }
     }    

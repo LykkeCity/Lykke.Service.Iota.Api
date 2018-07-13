@@ -27,7 +27,7 @@ namespace Lykke.Service.Iota.Job.PeriodicalHandlers
             }
             catch (Exception ex)
             {
-                _log.Error("Failed to update balances", ex);
+                _log.Error(ex, "Failed to update balances");
             }
         }
     }
