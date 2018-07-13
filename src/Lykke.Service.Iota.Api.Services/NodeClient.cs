@@ -433,6 +433,7 @@ namespace Lykke.Service.Iota.Api.Services
         {
             var tx = "";
             var error = "";
+            var start = DateTime.Now;
             var hashes = txs
                 .Reverse()
                 .Select(f => new Hash(f))
@@ -447,15 +448,29 @@ namespace Lykke.Service.Iota.Api.Services
 
                 if (result.successAttempts > 0)
                 {
-                    _log.Info("Promotion result",
-                        new { maxAttempts = attempts, result.successAttempts, result.error, depth, tx });
+                    _log.Info("Promotion result", new
+                    {
+                        maxAttempts = attempts,
+                        result.successAttempts,
+                        depth,
+                        secs = (DateTime.Now - start).TotalSeconds,
+                        result.error,
+                        tx
+                    });
 
                     return;
                 }
             }
 
-            _log.Info("Promotion result",
-                new { maxAttempts = attempts, successAttempts = 0, error, depth, tx });
+            _log.Info("Promotion result", new
+            {
+                maxAttempts = attempts,
+                successAttempts = 0,
+                depth,
+                secs = (DateTime.Now - start).TotalSeconds,
+                error,
+                tx
+            });
         }
 
         private async Task<(int successAttempts, string error)> PromoteTx(string tx, int attempts, int depth)
