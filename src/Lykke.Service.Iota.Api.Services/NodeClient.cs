@@ -331,30 +331,28 @@ namespace Lykke.Service.Iota.Api.Services
         {
             var start = DateTime.Now;
 
-            _log.Info("Get txs from trytes");
             var transactions = trytes.Select(f => Transaction.FromTrytes(new TransactionTrytes(f)));
 
-            _log.Info("Get transactions to approve");
             var txsToApprove = await GetTransactionsToApprove(NodeDepth);
 
-            _log.Info("Attach to tangle");
             var attachResultTrytes = await _repository.AttachToTangleAsync(
                 new Hash(txsToApprove.BranchTransaction),
                 new Hash(txsToApprove.TrunkTransaction),
                 transactions,
                 NodeMinWeightMagnitude);
 
-            _log.Info("Validate transactions");
+            _log.Info("PoW is done", new { secs = Math.Round((DateTime.Now - start).TotalSeconds, 1)});
+            start = DateTime.Now;
+
             var error = await ValidateTransactions(transactions);
             if (!string.IsNullOrEmpty(error))
             {
                 return (null, null, error);
             }
+            _log.Info("Transactions validated", new { secs = Math.Round((DateTime.Now - start).TotalSeconds, 1) });
+            start = DateTime.Now;
 
-            _log.Info("Broadcast transactions");
             await BroadcastTransactionsAsync(attachResultTrytes);
-
-            _log.Info("Store transactions");
             await StoreTransactionsAsync(attachResultTrytes);
 
             var txsBroadcasted = attachResultTrytes
@@ -367,7 +365,7 @@ namespace Lykke.Service.Iota.Api.Services
             _log.Info("Broadcast completed", new
             {
                 secs = Math.Round((DateTime.Now - start).TotalSeconds, 1),
-                tailTx
+                tx = tailTx.Hash.Value
             });
 
             return (tailTx.BundleHash.Value, tailTx.Timestamp, null);
@@ -450,6 +448,7 @@ namespace Lykke.Service.Iota.Api.Services
                 tx = hash.Value;
 
                 var result = await PromoteTx(tx, attempts, depth);
+
                 error = result.error;
 
                 if (result.successAttempts > 0)
@@ -460,7 +459,7 @@ namespace Lykke.Service.Iota.Api.Services
                         result.successAttempts,
                         depth,
                         secs = Math.Round((DateTime.Now - start).TotalSeconds, 1),
-                        result.error,
+                        error,
                         tx
                     });
 
