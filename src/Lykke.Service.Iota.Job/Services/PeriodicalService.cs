@@ -10,7 +10,6 @@ using Lykke.Service.Iota.Api.Core.Services;
 using Lykke.Service.Iota.Api.Core.Repositories;
 using Lykke.Service.Iota.Api.Shared;
 using Lykke.Service.Iota.Job.Settings;
-using Lykke.Service.Iota.Api.Core.Domain.Broadcast;
 using Lykke.Common.Log;
 
 namespace Lykke.Service.Iota.Job.Services
@@ -24,6 +23,7 @@ namespace Lykke.Service.Iota.Job.Services
         private readonly IBalanceRepository _balanceRepository;
         private readonly IBalancePositiveRepository _balancePositiveRepository;
         private readonly IAddressInputRepository _addressInputRepository;
+        private readonly IAddressVirtualRepository _addressVirtualRepository;
         private readonly IBuildRepository _buildRepository;
         private readonly INodeClient _nodeClient;
         private readonly IIotaService _iotaService;
@@ -36,6 +36,7 @@ namespace Lykke.Service.Iota.Job.Services
             IBalanceRepository balanceRepository,
             IBalancePositiveRepository balancePositiveRepository,
             IAddressInputRepository addressInputRepository,
+            IAddressVirtualRepository addressVirtualRepository,
             IBuildRepository buildRepository,
             INodeClient nodeClient,
             IIotaService iotaService,
@@ -48,6 +49,7 @@ namespace Lykke.Service.Iota.Job.Services
             _balanceRepository = balanceRepository;
             _balancePositiveRepository = balancePositiveRepository;
             _addressInputRepository = addressInputRepository;
+            _addressVirtualRepository = addressVirtualRepository;
             _buildRepository = buildRepository;
             _nodeClient = nodeClient;
             _iotaService = iotaService;
@@ -159,13 +161,24 @@ namespace Lykke.Service.Iota.Job.Services
             var virtualAddresses = transactionContext.Inputs
                 .Select(f => f.VirtualAddress)
                 .ToList();
-            virtualAddresses.AddRange(transactionContext.Outputs
-                .Where(f => f.Address.StartsWith(Consts.VirtualAddressPrefix))
-                .Select(f => f.Address));
+
+            foreach (var output in transactionContext.Outputs)
+            {
+                if (output.Address.StartsWith(Consts.VirtualAddressPrefix))
+                {
+                    virtualAddresses.Add(output.Address);
+                }
+                else
+                {
+                    var virtualAddress = await _addressVirtualRepository.GetVirtualAddressAsync(output.Address);
+                    if (!string.IsNullOrEmpty(virtualAddress))
+                    {
+                        virtualAddresses.Add(virtualAddress);
+                    }
+                }
+            }
 
             virtualAddresses = virtualAddresses.Distinct().ToList();
-
-            _log.Info("Refresh virtual addresses from broadcast", new { virtualAddresses });
 
             foreach (var virtualAddress in virtualAddresses)
             {
