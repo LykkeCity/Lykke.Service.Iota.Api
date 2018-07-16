@@ -12,11 +12,17 @@ namespace Lykke.Service.Iota.Api.Controllers
     public class AssetsController : Controller
     {
         [HttpGet]
-        public PaginationResponse<AssetResponse> Get([Required, FromQuery] int take, [FromQuery] string continuation)
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(PaginationResponse<AssetResponse>))]
+        public IActionResult Get([Required, FromQuery] int take, [FromQuery] string continuation)
         {
+            if (!ModelState.IsValidTakeParameter(take))
+            {
+                return BadRequest(ModelState.ToErrorResponse());
+            }
+
             var assets = new AssetResponse[] { Asset.Miota.ToAssetResponse() };
 
-            return PaginationResponse.From("", assets);
+            return Ok(PaginationResponse.From("", assets));
         }
 
         [HttpGet("{assetId}")]

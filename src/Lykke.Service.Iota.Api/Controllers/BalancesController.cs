@@ -36,14 +36,20 @@ namespace Lykke.Service.Iota.Api.Controllers
         }
 
         [HttpGet]
-        public async Task<PaginationResponse<WalletBalanceContract>> Get([Required, FromQuery] int take, [FromQuery] string continuation)
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(PaginationResponse<WalletBalanceContract>))]
+        public async Task<IActionResult> Get([Required, FromQuery] int take, [FromQuery] string continuation)
         {
+            if (!ModelState.IsValidTakeParameter(take))
+            {
+                return BadRequest(ModelState.ToErrorResponse());
+            }
+
             var result = await _balancePositiveRepository.GetAsync(take, continuation);
             
-            return PaginationResponse.From(
+            return Ok(PaginationResponse.From(
                 result.ContinuationToken, 
                 result.Entities.Select(f => f.ToWalletBalanceContract()).ToArray()
-            );
+            ));
         }
 
         [HttpPost("{address}/observation")]
@@ -72,9 +78,9 @@ namespace Lykke.Service.Iota.Api.Controllers
         [ProducesResponseType((int)HttpStatusCode.OK)]
         public async Task<IActionResult> DeleteFromObservations([Required] string address)
         {
-            if (string.IsNullOrEmpty(address))
+            if (!ModelState.IsValidAddress(address))
             {
-                return BadRequest(ErrorResponse.Create($"{nameof(address)} is null or empty"));
+                return BadRequest(ModelState.ToErrorResponse());
             }
 
             var balance = await _balanceRepository.GetAsync(address);
