@@ -22,7 +22,7 @@ namespace Lykke.Service.Iota.Api.Services
         private const string PromoteErrorConsistency = "entry point failed consistency check";
         private const string NodeHeaderName = "X-IOTA-API-Version";
         private const string NodeHeaderValue = "1.5";
-        private const int NodeTimeout = 30;
+        private const int NodeTimeout = 60;
         private const int NodeDepth = 8;
         private const int NodeMinWeightMagnitude = 14;
 
@@ -34,7 +34,7 @@ namespace Lykke.Service.Iota.Api.Services
         {
             var restClient = new RestClient(nodeUrl)
             {
-                Timeout = 30000
+                Timeout = 60000
             };
 
             _log = logFactory.CreateLog(this);
