@@ -76,12 +76,11 @@ namespace Lykke.Service.Iota.Job.Modules
 
             builder.RegisterType<NodeClient>()
                 .As<INodeClient>()
-                .WithParameter("nodeUrl", _settings.CurrentValue.IotaJob.NodeUrl)
+                .WithParameter(TypedParameter.From(_settings.CurrentValue.IotaJob.Node))
                 .SingleInstance();
 
             builder.RegisterType<IotaService>()
                 .As<IIotaService>()
-                .WithParameter("minConfirmations", _settings.CurrentValue.IotaJob.MinConfirmations)
                 .SingleInstance();
 
             builder.RegisterType<BalanceHandler>()

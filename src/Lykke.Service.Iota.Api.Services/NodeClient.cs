@@ -13,33 +13,28 @@ using Lykke.Service.Iota.Api.Services.Helpers;
 using Flurl.Http;
 using Lykke.Service.Iota.Api.Core.Domain.Address;
 using Lykke.Common.Log;
+using Lykke.Service.Iota.Api.Core.Domain.Settings;
 
 namespace Lykke.Service.Iota.Api.Services
 {
     public class NodeClient : INodeClient
     {
-        private const string PromoteErrorOldTransaction = "transaction is too old";
-        private const string PromoteErrorConsistency = "entry point failed consistency check";
         private const string NodeHeaderName = "X-IOTA-API-Version";
-        private const string NodeHeaderValue = "1.5";
-        private const int NodeTimeout = 60;
-        private const int NodeDepth = 8;
-        private const int NodeMinWeightMagnitude = 14;
 
         private readonly ILog _log;
         private readonly RestIotaRepository _repository;
-        private readonly string _nodeUrl;
+        private readonly NodeSettings _settings;
 
-        public NodeClient(ILogFactory logFactory, string nodeUrl)
+        public NodeClient(ILogFactory logFactory, NodeSettings settings)
         {
-            var restClient = new RestClient(nodeUrl)
+            var restClient = new RestClient(settings.Url)
             {
-                Timeout = 60000
+                Timeout = (int)settings.Timeout.TotalMilliseconds
             };
 
+            _settings = settings;
             _log = logFactory.CreateLog(this);
             _repository = new RestIotaRepository(restClient, new PoWService(new CpuPearlDiver()));
-            _nodeUrl = nodeUrl;
         }
 
         public async Task<object> GetNodeInfo()
@@ -246,7 +241,12 @@ namespace Lykke.Service.Iota.Api.Services
             return await HasIncludedTransactions(txsTailHashes);
         }
 
-        public async Task<long> GetAddressBalance(string address, int threshold)
+        public async Task<long> GetAddressBalance(string address)
+        {
+            return await GetAddressBalance(address, _settings.Threshold);
+        }
+
+        private async Task<long> GetAddressBalance(string address, int threshold)
         {
             try
             {
@@ -333,13 +333,13 @@ namespace Lykke.Service.Iota.Api.Services
 
             var transactions = trytes.Select(f => Transaction.FromTrytes(new TransactionTrytes(f)));
 
-            var txsToApprove = await GetTransactionsToApprove(NodeDepth);
+            var txsToApprove = await GetTransactionsToApprove(_settings.BroadcastDepth);
 
             var attachResultTrytes = await _repository.AttachToTangleAsync(
                 new Hash(txsToApprove.BranchTransaction),
                 new Hash(txsToApprove.TrunkTransaction),
                 transactions,
-                NodeMinWeightMagnitude);
+                _settings.MinWeightMagnitude);
 
             _log.Info("PoW is done", new { secs = Math.Round((DateTime.Now - start).TotalSeconds, 1)});
             start = DateTime.Now;
@@ -416,13 +416,13 @@ namespace Lykke.Service.Iota.Api.Services
         public async Task<(string Hash, long Block)> Reattach(string tailTxHash)
         {
             var bundle = await _repository.GetBundleAsync(new Hash(tailTxHash));
-            var txsToApprove = await GetTransactionsToApprove(NodeDepth);
+            var txsToApprove = await GetTransactionsToApprove(_settings.BroadcastDepth);
 
             var attachResultTrytes = await _repository.AttachToTangleAsync(
                 new Hash(txsToApprove.BranchTransaction),
                 new Hash(txsToApprove.TrunkTransaction),
                 bundle.Transactions,
-                NodeMinWeightMagnitude);
+                _settings.MinWeightMagnitude);
 
             await BroadcastTransactionsAsync(attachResultTrytes);
             await StoreTransactionsAsync(attachResultTrytes);
@@ -433,7 +433,7 @@ namespace Lykke.Service.Iota.Api.Services
             return (tailTx.Hash.Value, tailTx.Timestamp);
         }
 
-        public async Task Promote(string[] txs, int attempts = 3, int depth = 15)
+        public async Task Promote(string[] txs, int attempts = 3)
         {
             var tx = "";
             var error = "";
@@ -447,7 +447,7 @@ namespace Lykke.Service.Iota.Api.Services
             {
                 tx = hash.Value;
 
-                var result = await PromoteTx(tx, attempts, depth);
+                var result = await PromoteTx(tx, attempts, _settings.PromoteDepth);
 
                 error = result.error;
 
@@ -457,7 +457,7 @@ namespace Lykke.Service.Iota.Api.Services
                     {
                         maxAttempts = attempts,
                         result.successAttempts,
-                        depth,
+                        depth = _settings.PromoteDepth,
                         secs = Math.Round((DateTime.Now - start).TotalSeconds, 1),
                         error,
                         tx
@@ -471,7 +471,7 @@ namespace Lykke.Service.Iota.Api.Services
             {
                 maxAttempts = attempts,
                 successAttempts = 0,
-                depth,
+                depth = _settings.PromoteDepth,
                 secs = Math.Round((DateTime.Now - start).TotalSeconds, 1),
                 error,
                 tx
@@ -550,9 +550,9 @@ namespace Lykke.Service.Iota.Api.Services
                 depth
             };
 
-            return await _nodeUrl
-                .WithHeader(NodeHeaderName, NodeHeaderValue)
-                .WithTimeout(NodeTimeout)
+            return await _settings.Url
+                .WithHeader(NodeHeaderName, _settings.Version)
+                .WithTimeout(_settings.Timeout)
                 .PostJsonAsync(data)
                 .ReceiveJson<GetTransactionsToApproveResponse>();
         }
@@ -566,9 +566,9 @@ namespace Lykke.Service.Iota.Api.Services
                 reference
             };
 
-            return await _nodeUrl
-                .WithHeader(NodeHeaderName, NodeHeaderValue)
-                .WithTimeout(NodeTimeout)
+            return await _settings.Url
+                .WithHeader(NodeHeaderName, _settings.Version)
+                .WithTimeout(_settings.Timeout)
                 .PostJsonAsync(data)
                 .ReceiveJson<GetTransactionsToApproveResponse>();
         }
@@ -581,9 +581,9 @@ namespace Lykke.Service.Iota.Api.Services
                 trytes = transactions.Select(t => t.Value).ToList()
             };
 
-            var result = await _nodeUrl
-                .WithHeader(NodeHeaderName, NodeHeaderValue)
-                .WithTimeout(NodeTimeout)
+            var result = await _settings.Url
+                .WithHeader(NodeHeaderName, _settings.Version)
+                .WithTimeout(_settings.Timeout)
                 .PostJsonAsync(data);
         }
 
@@ -595,9 +595,9 @@ namespace Lykke.Service.Iota.Api.Services
                 trytes = transactions.Select(t => t.Value).ToList()
             };
 
-            var result = await _nodeUrl
-                .WithHeader(NodeHeaderName, NodeHeaderValue)
-                .WithTimeout(NodeTimeout)
+            var result = await _settings.Url
+                .WithHeader(NodeHeaderName, _settings.Version)
+                .WithTimeout(_settings.Timeout)
                 .PostJsonAsync(data);
         }
     }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Lykke.Service.Iota.Api.Core.Domain.Settings;
+using System;
 using Tangle.Net.Entity;
 
 namespace Lykke.Service.Iota.Api.Services.Helpers

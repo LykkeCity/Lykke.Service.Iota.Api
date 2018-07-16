@@ -12,18 +12,15 @@ namespace Lykke.Service.Iota.Api.Services
         private readonly IAddressInputRepository _addressInputRepository;
         private readonly IBuildRepository _buildRepository;
         private readonly INodeClient _nodeClient;
-        private readonly int _minConfirmations;
 
         public IotaService(IAddressInputRepository addressInputRepository,
             IBuildRepository buildRepository,
             IBalanceRepository balanceRepository,
-            INodeClient nodeClient,
-            int minConfirmations)
+            INodeClient nodeClient)
         {
             _addressInputRepository = addressInputRepository;
             _buildRepository = buildRepository;
             _nodeClient = nodeClient;
-            _minConfirmations = minConfirmations;
         }
 
         public async Task<string> GetRealAddress(string virtualAddress)
@@ -51,7 +48,7 @@ namespace Lykke.Service.Iota.Api.Services
                 {
                     Address = addressInput.Address,
                     Index = addressInput.Index,
-                    Balance = await _nodeClient.GetAddressBalance(addressInput.Address, _minConfirmations)
+                    Balance = await _nodeClient.GetAddressBalance(addressInput.Address)
                 });
             }
 

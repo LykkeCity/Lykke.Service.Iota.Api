@@ -67,12 +67,11 @@ namespace Lykke.Service.Iota.Api.Modules
 
             builder.RegisterType<NodeClient>()
                 .As<INodeClient>()
-                .WithParameter("nodeUrl", _settings.CurrentValue.IotaApi.NodeUrl)
+                .WithParameter(TypedParameter.From(_settings.CurrentValue.IotaApi.Node))
                 .SingleInstance();
 
             builder.RegisterType<IotaService>()
                 .As<IIotaService>()
-                .WithParameter("minConfirmations", _settings.CurrentValue.IotaApi.MinConfirmations)
                 .SingleInstance();
         }
     }

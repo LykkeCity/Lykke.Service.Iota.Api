@@ -53,9 +53,9 @@ namespace Lykke.Service.Iota.Api.Controllers
         }
 
         [HttpGet("address/{hash}/balance")]
-        public async Task<long> HasCashOut([Required] string hash, int threshold)
+        public async Task<long> GetBalance([Required] string hash)
         {
-            return await _nodeClient.GetAddressBalance(hash, threshold);
+            return await _nodeClient.GetAddressBalance(hash);
         }
 
         [HttpGet("address/{hash}/can-recieve")]
@@ -79,12 +79,12 @@ namespace Lykke.Service.Iota.Api.Controllers
         }
 
         [HttpGet("tx/{hash}/promote")]
-        public async Task PromoteBundle([Required] string hash, [Required] int attemts, [Required] int depth)
+        public async Task PromoteBundle([Required] string hash, [Required] int attemts)
         {
             var info = await _nodeClient.GetBundleInfo(hash);
             if (!info.Included)
             {
-                await _nodeClient.Promote(info.Txs, attemts, depth);
+                await _nodeClient.Promote(info.Txs, attemts);
             }
         }
 
