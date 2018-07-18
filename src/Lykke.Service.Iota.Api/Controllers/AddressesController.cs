@@ -54,18 +54,18 @@ namespace Lykke.Service.Iota.Api.Controllers
         [HttpGet("{address}/underlying")]
         public async Task<IActionResult> GetAddressUnderlying([Required] string address)
         {
-            return Ok(new
+            return Ok(new UnderlyingAddressResponse()
             {
-                underlyingAddress = await _iotaService.GetRealAddress(address)
+                UnderlyingAddress = await _iotaService.GetRealAddress(address)
             });
         }
 
         [HttpGet("{address}/virtual")]
         public async Task<IActionResult> GetAddressVirtual([Required] string address)
         {
-            return Ok(new
+            return Ok(new VirtualAddressResponse
             {
-                virtualAddress = await _addressVirtualRepository.GetVirtualAddressAsync(address)
+                VirtualAddress = await _addressVirtualRepository.GetVirtualAddressAsync(address)
             });
         }
     }
