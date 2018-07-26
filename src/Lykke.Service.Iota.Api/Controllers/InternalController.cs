@@ -82,10 +82,8 @@ namespace Lykke.Service.Iota.Api.Controllers
         public async Task PromoteBundle([Required] string hash, [Required] int attemts)
         {
             var info = await _nodeClient.GetBundleInfo(hash);
-            if (!info.Included)
-            {
-                await _nodeClient.Promote(info.Txs, attemts);
-            }
+
+            await _nodeClient.Promote(info.Txs, attemts);
         }
 
         [HttpGet("node/info")]

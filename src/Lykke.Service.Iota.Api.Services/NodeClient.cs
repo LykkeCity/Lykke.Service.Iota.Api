@@ -455,7 +455,7 @@ namespace Lykke.Service.Iota.Api.Services
             {
                 tx = hash.Value;
 
-                var result = await PromoteTx(tx, attempts, _settings.PromoteDepth);
+                var result = await PromoteTx(tx, attempts);
 
                 error = result.error;
 
@@ -486,7 +486,7 @@ namespace Lykke.Service.Iota.Api.Services
             });
         }
 
-        private async Task<(int successAttempts, string error)> PromoteTx(string tx, int attempts, int depth)
+        private async Task<(int successAttempts, string error)> PromoteTx(string tx, int attempts)
         {
             var successAttempts = 0;
 
@@ -506,7 +506,7 @@ namespace Lykke.Service.Iota.Api.Services
                     bundle.Finalize();
                     bundle.Sign();
 
-                    var txsToApprove = await GetTransactionsToApprove(depth, tx);
+                    var txsToApprove = await GetTransactionsToApprove(_settings.PromoteDepth, tx);
 
                     var attachResultTrytes = await _repository.AttachToTangleAsync(
                         new Hash(txsToApprove.BranchTransaction),
