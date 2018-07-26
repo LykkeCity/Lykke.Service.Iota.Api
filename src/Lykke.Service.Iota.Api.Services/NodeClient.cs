@@ -34,7 +34,15 @@ namespace Lykke.Service.Iota.Api.Services
 
             _settings = settings;
             _log = logFactory.CreateLog(this);
-            _repository = new RestIotaRepository(restClient, new PoWService(new CpuPearlDiver()));
+
+            if (settings.RemotePoW)
+            {
+                _repository = new RestIotaRepository(restClient);
+            }
+            else
+            {
+                _repository = new RestIotaRepository(restClient, new PoWService(new CpuPearlDiver()));
+            }
         }
 
         public async Task<object> GetNodeInfo()

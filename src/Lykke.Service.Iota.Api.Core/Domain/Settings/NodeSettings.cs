@@ -11,5 +11,6 @@ namespace Lykke.Service.Iota.Api.Core.Domain.Settings
         public int BroadcastDepth { get; set; }
         public int PromoteDepth { get; set; }
         public int MinWeightMagnitude { get; set; }
+        public bool RemotePoW { get; set; }
     }
 }
