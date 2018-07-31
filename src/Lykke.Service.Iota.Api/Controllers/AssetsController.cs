@@ -31,7 +31,7 @@ namespace Lykke.Service.Iota.Api.Controllers
         {
             if(Asset.Miota.Id != assetId)
             {
-                return NotFound();
+                return NoContent();
             }
 
             return Ok(Asset.Miota.ToAssetResponse());
