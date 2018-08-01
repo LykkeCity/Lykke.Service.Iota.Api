@@ -4,5 +4,6 @@
     {
         public string Hash { get; set; }
         public string[] Transactions { get; set; }
+        public string Error { get; set; }
     }
 }
