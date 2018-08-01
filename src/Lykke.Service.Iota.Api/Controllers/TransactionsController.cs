@@ -230,7 +230,15 @@ namespace Lykke.Service.Iota.Api.Controllers
             }
 
             var context = JsonConvert.DeserializeObject<SignedTransactionContext>(request.SignedTransaction);
-            if (context == null || string.IsNullOrEmpty(context.Hash) || context.Transactions == null || !context.Transactions.Any())
+            if (context == null)
+            {
+                return BadRequest(ErrorResponse.Create($"{nameof(request.SignedTransaction)} is null"));
+            }
+            if (!string.IsNullOrEmpty(context.Error))
+            {
+                return BadRequest(ErrorResponse.Create(context.Error));
+            }
+            if (string.IsNullOrEmpty(context.Hash) || context.Transactions == null || !context.Transactions.Any())
             {
                 return BadRequest(ErrorResponse.Create($"{nameof(request.SignedTransaction)} is not a valid"));
             }
